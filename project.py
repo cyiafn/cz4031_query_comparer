@@ -1,5 +1,5 @@
 from configparser import ConfigParser
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 import psycopg2
 
@@ -13,13 +13,13 @@ class QueryPlanNode:
         self.left: QueryPlanNode = left
         self.right: QueryPlanNode = right
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanNode):
             return False
         return self.node == other.node and self.totalCost == other.totalCost and \
             self.ParentRelation == other.ParentRelation
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.node}, {self.left}, {self.right}"
 
 
@@ -32,10 +32,10 @@ class QueryPlanSortNode(QueryPlanNode):
     def Am(node: Dict[str, any]) -> bool:
         return "Sort Key" in node and node["Sort Key"] == "Sort"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{super().__str__()}"
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanSortNode):
             return False
         return super().__eq__(other) and self.SortKeys == other.SortKeys
@@ -50,10 +50,10 @@ class QueryPlanGroupNode(QueryPlanNode):
     def Am(node: Dict[str, any]) -> bool:
         return "Group Key" in node
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{super().__str__()}"
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanGroupNode):
             return False
         return super().__eq__(other) and self.GroupKeys == other.GroupKeys
@@ -76,10 +76,10 @@ class QueryPlanJoinNode(QueryPlanNode):
             return node["Filter"]
         return ""
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{super().__str__()}"
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanJoinNode):
             return False
         return super().__eq__(other) and self.JoinType == other.JoinType and self.JoinCond == other.JoinCond
@@ -97,10 +97,10 @@ class QueryPlanScanNode(QueryPlanNode):
     def Am(node: Dict[str, any]) -> bool:
         return "Relation Name" in node
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{super().__str__()}"
 
-    def __eq__(self, other: Any):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanScanNode):
             return False
         return super().__eq__(other) and self.RelationName == other.RelationName and \
@@ -132,8 +132,23 @@ class QueryPlan:
             return QueryPlanScanNode(plan, left, right)
         return QueryPlanNode(plan, left, right)
 
-    def print(self):
+    def print(self) -> None:
         print(self.root)
+
+    def IsEqual(self, other) -> Tuple[bool, QueryPlanNode, QueryPlanNode]:
+        if not isinstance(other, QueryPlan):
+            return False, self.root, other.root
+
+        def isEq(node1: QueryPlanNode, node2: QueryPlanNode) -> Tuple[bool, QueryPlanNode, QueryPlanNode]:
+            if node1 is None and node2 is None:
+                return True, None, None
+            if node1 is None or node2 is None:
+                return False, node1, node2
+            if node1 != node2:
+                return False, node1, node2
+            return isEq(node1.left, node2.left) and isEq(node1.right, node2.right)
+
+        return isEq(self.root, other.root)
 
 
 # DB
@@ -166,4 +181,9 @@ def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
 if __name__ == "__main__":
     plan = query(
         "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
-    QueryPlan(plan["Plan"]).print()
+    q1 = QueryPlan(plan["Plan"])
+    plan = query(
+        "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
+    q2 = QueryPlan(plan["Plan"])
+
+    print(q1.IsEqual(q2))
