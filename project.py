@@ -1,5 +1,5 @@
 from configparser import ConfigParser
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 import psycopg2
 import sqlparse
@@ -74,7 +74,8 @@ class QueryPlanJoinNode(QueryPlanNode):
     def Am(node: Dict[str, any]) -> bool:
         return "Join Type" in node
 
-    def generateJoinCond(self, node: Dict[str, Any]) -> str:
+    @staticmethod
+    def generateJoinCond(node: Dict[str, Any]) -> str:
         if "Hash Cond" in node:
             return node["Hash Cond"]
         if "Filter" in node:
@@ -144,7 +145,8 @@ class QueryPlan:
         if not isinstance(other, QueryPlan):
             return False, self.root, other.root
 
-        def isEq(node1: QueryPlanNode, node2: QueryPlanNode) -> Tuple[bool, QueryPlanNode, QueryPlanNode]:
+        def isEq(node1: QueryPlanNode, node2: QueryPlanNode) -> Tuple[
+            bool, Optional[QueryPlanNode], Optional[QueryPlanNode]]:
             if node1 is None and node2 is None:
                 return True, None, None
             if node1 is None or node2 is None:
