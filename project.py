@@ -2,6 +2,11 @@ from configparser import ConfigParser
 from typing import Dict, Any, List, Tuple
 
 import psycopg2
+import sqlparse
+
+SQL_KEYWORDS = set(
+    "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
+        ", "))
 
 
 # Query Tree Nodes =======================================================
@@ -178,12 +183,55 @@ def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
     return cfg
 
 
-if __name__ == "__main__":
-    plan = query(
-        "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
-    q1 = QueryPlan(plan["Plan"])
-    plan = query(
-        "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
-    q2 = QueryPlan(plan["Plan"])
+# SQL =====
+def parseSQL(sqlQuery: str) -> Tuple[str, List[List[str]]]:
+    formattedSQL = sqlparse.format(sqlQuery, reindent=True, keyword_case='upper', strip_comments=True)
+    return formattedSQL, groupFormattedSQLByClause(formattedSQL)
 
-    print(q1.IsEqual(q2))
+
+'''
+This group is as such, if there is a keyword (non-operator) such as SELECT, WHERE, FROM,
+then we will form a new group. Otherwise, we will append the line to the previous group.
+
+So, for example, the following SQL:
+SELECT *
+FROM Students
+WHERE StudentID = 1
+  AND StudentName = 'John'
+
+Will be grouped as such:
+[['SELECT *'], ['FROM Students'], ['WHERE StudentID = 1', '  AND StudentName = 'John'']]
+
+Note that the spaces are preserved.
+
+This might serve as a more useful format for us to parse the SQL for differences.
+'''
+
+
+def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
+    groupedSQL = []
+    tempGroup = []
+    splitSQLQuery = sqlQuery.split("\n")
+    for line in splitSQLQuery:
+        strippedLine = line.strip()
+        if strippedLine.split(" ")[0] in SQL_KEYWORDS:
+            groupedSQL.append(tempGroup) if len(tempGroup) > 0 else None
+            tempGroup = [line]
+        else:
+            tempGroup.append(line)
+
+    groupedSQL.append(tempGroup)
+    return groupedSQL
+
+
+if __name__ == "__main__":
+    print(parseSQL(
+        "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"))
+    # plan = query(
+    #     "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
+    # q1 = QueryPlan(plan["Plan"])
+    # plan = query(
+    #     "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
+    # q2 = QueryPlan(plan["Plan"])
+    #
+    # print(q1.IsEqual(q2))
