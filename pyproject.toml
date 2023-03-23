@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "cz4031-query-comparer"
+version = "0.1.0"
+description = ""
+authors = ["cyiafn <dev@cyifan.dev>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+psycopg2-binary = "^2.9.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
