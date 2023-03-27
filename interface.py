@@ -29,8 +29,14 @@ queryplan1_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN1IMAGE-")]]
 queryplan2_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN2IMAGE-")]]
 queryplanimage_column = [
     [sg.Text("Query Plan Visualization", font=("Helvitica", "16", "bold"))],
-    [sg.Column(queryplan1_image, scrollable=True, key="-QUERYPLAN1IMAGECOLUMN-")],
-    [sg.Column(queryplan2_image, scrollable=True, key="-QUERYPLAN2IMAGECOLUMN-")],
+    [
+        sg.Column(queryplan1_image, scrollable=True, key="-QUERYPLAN1IMAGECOLUMN-"),
+        sg.Button("View", key="-VIEW1-"),
+    ],
+    [
+        sg.Column(queryplan2_image, scrollable=True, key="-QUERYPLAN2IMAGECOLUMN-"),
+        sg.Button("View", key="-VIEW2-"),
+    ],
 ]
 
 queryplan_column = [
@@ -214,6 +220,16 @@ def start_ui() -> None:
             break
         elif event == "-COMPARE-":
             compare_btn(window, event, values)
+        elif event == "-VIEW1-":
+            sg.popup(
+                keep_on_top=True,
+                image="tree_1.png",
+            )
+        elif event == "-VIEW2-":
+            sg.popup(
+                keep_on_top=True,
+                image="tree_2.png",
+            )
         elif event == "-QUERY1-":
             error_msg = ""
             if values[event] and not values["-QUERY2-"]:
