@@ -1,7 +1,7 @@
-from anytree import Node
 import PySimpleGUI as sg
+from anytree import Node
 from anytree.exporter import UniqueDotExporter
-from project import QueryPlan, query
+from project import QueryPlan, QueryPlanNode, query
 import os
 
 os.environ["PATH"] += os.pathsep + "Graphviz/bin"  # Set Graphviz PATH
@@ -85,13 +85,57 @@ layout = [
 ]
 
 
-def build_tree(node, parent=None):
-    node_type = node["Node Type"]
-    current_node = Node(node_type, parent=parent)
-    if "Plans" in node:
-        for child in node["Plans"]:
-            build_tree(child, parent=current_node)
+def build_tree_diff(root: QueryPlanNode, parent=None) -> Node:
+    current_node = Node(root.node, parent=parent, color="red")
+    if root.left:
+        build_tree_diff(root.left, parent=current_node)
+    if root.right:
+        build_tree_diff(root.right, parent=current_node)
+
     return current_node
+
+
+def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
+    current_node = None
+    if not diff:
+        current_node = Node(root.node, parent=parent)
+        if root.left:
+            build_tree(root.left, parent=current_node)
+        if root.right:
+            build_tree(root.right, parent=current_node)
+    else:
+        if diff.node != root.node:
+            current_node = Node(root.node, parent=parent, color="red")
+            if root.left:
+                build_tree_diff(root.left, parent=current_node)
+            if root.right:
+                build_tree_diff(root.right, parent=current_node)
+        else:
+            current_node = Node(root.node, parent=parent)
+            if root.left:
+                build_tree(root.left, parent=current_node, diff=diff)
+            if root.right:
+                build_tree(root.right, parent=current_node, diff=diff)
+
+    return current_node
+
+
+def set_name_color(node):
+    attrs = []
+    attrs += [f'label="{node.name}"'] if hasattr(node, "name") else []
+    attrs += [f"color={node.color}"] if hasattr(node, "color") else []
+    return ", ".join(attrs)
+
+
+def highlight_text(window: sg.Window, query_1, query_2, diff_1, diff_2):
+    # Highlight the differences in query
+    start = query_1.find(diff_1)
+    end = start + len(diff_1)
+    window["-QUERY1-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+
+    start = query_2.find(diff_2)
+    end = start + len(diff_2)
+    window["-QUERY2-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
 
 
 def compare_btn(window: sg.Window, event, values):
@@ -117,28 +161,31 @@ def compare_btn(window: sg.Window, event, values):
         q_plan_1 = query(query_1)
         q_plan_2 = query(query_2)
 
-        tree_1 = build_tree(q_plan_1["Plan"])
-        tree_2 = build_tree(q_plan_2["Plan"])
+        q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
+        q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
+
+        output = q_plan_1_nodes.IsEqual(q_plan_2_nodes)
+        equal = output[0]
+        if not equal:
+            tree_1 = build_tree(q_plan_1_nodes.root)
+            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[1])
+        else:
+            tree_1 = build_tree(q_plan_1_nodes.root)
+            tree_2 = build_tree(q_plan_2_nodes.root)
 
         # Export tree to PNG file using UniqueDotExporter
         filename_1 = "tree_1.png"
         filename_2 = "tree_2.png"
 
-        dot_exporter = UniqueDotExporter(tree_1)
-        dot_exporter.to_picture(filename_1)
+        UniqueDotExporter(tree_1).to_picture(filename_1)
         window["-QUERYPLAN1IMAGE-"].update(filename_1)
 
-        dot_exporter = UniqueDotExporter(tree_2)
-        dot_exporter.to_picture(filename_2)
+        UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
         window["-QUERYPLAN2IMAGE-"].update(filename_2)
 
-        start = query_1.find("select")
-        end = start + len("select")
-        window["-QUERY1-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
-
-        start = query_2.find("n_name")
-        end = start + len("n_name")
-        window["-QUERY2-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+        highlight_text(
+            window, query_1, query_2, "SELECT", "AND C.c_name ILIKE '%cheng'"
+        )
 
         # Refresh the update
         window.refresh()
@@ -177,6 +224,8 @@ def start_ui() -> None:
 
             if window["-ERROR-"].get():
                 window["-ERROR-"].update(error_msg)
+
+            window[event].Widget.tag_remove("highlight", "1.0", "end")
         elif event == "-QUERY2-":
             error_msg = ""
             if values[event] and not values["-QUERY1-"]:
@@ -187,6 +236,9 @@ def start_ui() -> None:
 
             if window["-ERROR-"].get():
                 window["-ERROR-"].update(error_msg)
+
+            window[event].Widget.tag_remove("highlight", "1.0", "end")
+
     window.close()
 
 
