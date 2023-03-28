@@ -81,7 +81,19 @@ files = [
     {file = "psycopg2_binary-2.9.5-cp39-cp39-win_amd64.whl", hash = "sha256:484405b883630f3e74ed32041a87456c5e0e63a8e3429aa93e8714c366d62bd1"},
 ]
 
+[[package]]
+name = "sqlparse"
+version = "0.4.3"
+description = "A non-validating SQL parser."
+category = "main"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "sqlparse-0.4.3-py3-none-any.whl", hash = "sha256:0323c0ec29cd52bceabc1b4d9d579e311f3e4961b98d174201d5622a23b85e34"},
+    {file = "sqlparse-0.4.3.tar.gz", hash = "sha256:69ca804846bb114d2ec380e4360a8a340db83f0ccf3afceeb1404df028f57268"},
+]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e2bd2a254e97a9ac0c16f55b0a5bf6b5947ea336e0fc6b03a232a374e2cfff35"
+content-hash = "b45edf92fce0dd636e58471767d420a028ba22ced3758e98da47e6c8078b4414"
