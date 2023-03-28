@@ -1,7 +1,9 @@
+import difflib
 import PySimpleGUI as sg
 from anytree import Node
 from anytree.exporter import UniqueDotExporter
-from project import QueryPlan, QueryPlanNode, query
+import sqlparse
+from project import SQL_KEYWORDS, QueryPlan, QueryPlanNode, parseSQL, query
 import os
 
 os.environ["PATH"] += os.pathsep + "Graphviz/bin"  # Set Graphviz PATH
@@ -133,15 +135,42 @@ def set_name_color(node):
     return ", ".join(attrs)
 
 
-def highlight_text(window: sg.Window, query_1, query_2, diff_1, diff_2):
-    # Highlight the differences in query
-    start = query_1.find(diff_1)
-    end = start + len(diff_1)
-    window["-QUERY1-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+def get_diff(sql1, sql2):
+    _, list1 = parseSQL(sql1)
+    _, list2 = parseSQL(sql2)
+    diff = []
+    for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
+        if sublist1 != sublist2:
+            sm = difflib.SequenceMatcher(
+                lambda x: x in SQL_KEYWORDS, sublist1, sublist2
+            )
+            for tag, i1, i2, j1, j2 in sm.get_opcodes():
+                sublist1[0]
+                print(tag)
+                if tag == "replace":
+                    diff.append(f'{sublist2[j1:j2][0].replace("/", "").lstrip()}')
+                elif tag == "insert":
+                    diff.append(f'{sublist2[j1:j2][0].replace("/", "").lstrip()}')
 
-    start = query_2.find(diff_2)
-    end = start + len(diff_2)
-    window["-QUERY2-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+    return diff
+
+
+def highlight_text(window: sg.Window, query_1, query_2):
+    # Highlight the differences in query
+    # start = query_1.find(diff_1)
+    # end = start + len(diff_1)
+    # window["-QUERY1-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+    diffs = get_diff(query_1, query_2)
+    print(diffs)
+    for diff in diffs:
+        start = query_2.find(diff)
+        if start != -1:
+            end = start + len(diff)
+            window["-QUERY2-"].Widget.tag_add("highlight", f"1.{start}", f"1.{end}")
+
+
+def format_query(query):
+    return sqlparse.format(query, keyword_case="upper", strip_comments=True)
 
 
 def compare_btn(window: sg.Window, event, values):
@@ -161,8 +190,13 @@ def compare_btn(window: sg.Window, event, values):
     if error_msg:
         window["-ERROR-"].update(error_msg)
     else:
-        query_1 = window["-QUERY1-"].get()
-        query_2 = window["-QUERY2-"].get()
+        # query_1 = window["-QUERY1-"].get()
+        # query_2 = window["-QUERY2-"].get()
+
+        query_1 = format_query(window["-QUERY1-"].get())
+        query_2 = format_query(window["-QUERY2-"].get())
+        window["-QUERY1-"].update(query_1)
+        window["-QUERY2-"].update(query_2)
 
         q_plan_1 = query(query_1)
         q_plan_2 = query(query_2)
@@ -189,9 +223,7 @@ def compare_btn(window: sg.Window, event, values):
         UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
         window["-QUERYPLAN2IMAGE-"].update(filename_2)
 
-        highlight_text(
-            window, query_1, query_2, "SELECT", "AND C.c_name ILIKE '%cheng'"
-        )
+        highlight_text(window, query_1, query_2)
 
         # Refresh the update
         window.refresh()
