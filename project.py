@@ -230,7 +230,7 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
 def getDiff(sql1, sql2):
     sql1_formatted, list1 = parseSQL(sql1)
     sql2_formatted, list2 = parseSQL(sql2)
-    diff = []
+    diff = {}
     for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
         
         for i in range(len(sublist1)):
@@ -238,20 +238,20 @@ def getDiff(sql1, sql2):
         for i in range(len(sublist2)):
             sublist2[i] = sublist2[i].replace(",","")
         
-        
+        diff['Modified'] = []
+        diff['Removed'] = []
+        diff['Added'] = []
         if sublist1 != sublist2:
             sm = difflib.SequenceMatcher(lambda x: x in SQL_KEYWORDS, sublist1, sublist2)
-            for tag, i1, i2, j1, j2 in sm.get_opcodes():
-              
-                
+            for tag, i1, i2, j1, j2 in sm.get_opcodes():               
                 str1 = ' '.join(sublist1[i1:i2])
                 str2 = ' '.join(sublist2[j1:j2])
                 if tag == 'replace':
-                    diff.append(f' Modified: {str1} => {str2}')
+                    diff['Modified'].extend([[str1],[str2]])
                 elif tag == 'delete':
-                    diff.append(f' Removed: {str1}')
+                    diff['Removed'].extend([str1])
                 elif tag == 'insert':
-                    diff.append(f' Added: {str2}')
+                    diff['Added'].extend([str1])
               
                
     return diff
