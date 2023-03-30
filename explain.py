@@ -1,3 +1,4 @@
+from project import QueryPlan, QueryPlanJoinNode, query
 import re
 
 diffInQuery = [
@@ -71,7 +72,7 @@ def explain():
             tuple_attrs.append(match)
 
         # Print the resulting lists
-        print("Comparisons:", comparisons)
+        #print("Comparisons:", comparisons)
         count1 = 0
         if status == 'Modified':
             explaination += "join condition changes from "
@@ -86,8 +87,23 @@ def explain():
                 explaination += " ".join(str(j) for j in i) + " "
 
 
+    query_1 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey"
+    query_2 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey AND c.c_name LIKE '%cheng'"
+
+    q_plan_1 = query(query_1)
+    q_plan_2 = query(query_2)
+
+    q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
+    q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
+
+    print(q_plan_1_nodes.root.JoinCond)
+    print(q_plan_1_nodes.root.node)
+    print_nodes(q_plan_1_nodes.root)
+    build_tree_diff(q_plan_1_nodes.root)
+
     #diffInPlan = Selection/Join/Projection
-    
+    # queryTwo = QueryPlan.root.getJoinConditions()
+
     #Types of Join:
         #Types of Nested Loop(NL) Join:
             # Tuple Based NL Join
@@ -95,7 +111,6 @@ def explain():
             # Block-based NL Join
         #Sort-Based Algorithms:
             #Sort Merge Join
-    explaination += ",the query plan uses sort-merge join instead. \nBecause,"
             #Refine Merge Join
         #Hash-Based Algorithms:
             #Grace Hash Join
@@ -104,7 +119,26 @@ def explain():
             #Index-Based Join:
                 #Clustered
                 #Uncluctered
+
+    explaination += ",the query plan uses sort-merge join instead. \nBecause,"
     explaination = explaination.replace("(", "").replace(")", "").replace("'", "")
-    print(explaination)
+    #print(explaination)
+
+def print_nodes(node):
+    if node is None:
+        return
+    print(node)
+    print_nodes(node.left)
+    print_nodes(node.right)
+
+def build_tree_diff(node, parent=None):
+    current_node = node, parent=parent
+    print(current_node)
+    if node.left:
+        build_tree_diff(node.left, parent=current_node)
+    if node.right:
+        build_tree_diff(node.right, parent=current_node)
+
+    return current_node  
 
 explain()
