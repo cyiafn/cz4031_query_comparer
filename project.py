@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import psycopg2
 import sqlparse
 import difflib 
+from string import whitespace
 
 SQL_KEYWORDS = set(
     "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
@@ -236,19 +237,23 @@ def getDiff(sql1, sql2):
             sublist1[i] = sublist1[i].replace(",","")
         for i in range(len(sublist2)):
             sublist2[i] = sublist2[i].replace(",","")
-        print(sublist1,sublist2)   
+        
         
         if sublist1 != sublist2:
             sm = difflib.SequenceMatcher(lambda x: x in SQL_KEYWORDS, sublist1, sublist2)
             for tag, i1, i2, j1, j2 in sm.get_opcodes():
-                sublist1[0]    
-                if tag == 'replace':
-                    diff.append(f' Modified: {sublist1[i1:i2][0].replace("/", "")} => {sublist2[j1:j2][0].replace("/", "")}')
-                elif tag == 'delete':
-                    diff.append(f' Removed: {sublist1[i1:i2][0].replace("/", "")}')
-                elif tag == 'insert':
-                    diff.append(f' Added: {sublist2[j1:j2][0].replace("/", "")}')
               
+                
+                str1 = ' '.join(sublist1[i1:i2])
+                str2 = ' '.join(sublist2[j1:j2])
+                if tag == 'replace':
+                    diff.append(f' Modified: {str1} => {str2}')
+                elif tag == 'delete':
+                    diff.append(f' Removed: {str1}')
+                elif tag == 'insert':
+                    diff.append(f' Added: {str2}')
+              
+               
     return diff
 
 
@@ -265,5 +270,5 @@ if __name__ == "__main__":
     # print(q1.IsEqual(q2))
     # print(q2[1])
     q1 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"
-    q2 = "select n_name from customer, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'nonASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01'  and s_acctbal > 20 and test = 'dfersr' group by n_name order by revenue desc;"
+    q2 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1996-01-01' and c_acctbal > 20  group by n_name order by revenue desc;"
     print(getDiff(q1,q2))           
