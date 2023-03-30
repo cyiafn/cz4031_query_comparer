@@ -1,101 +1,90 @@
 import re
 
+diffInQuery = [
+    'Removed: c_custkey = o_custkey',
+    "Modified: AND r_name = 'ASIA'  => AND r_name = 'nonASIA'",
+    'Removed: AND c_acctbal > 10',
+    "Added: AND customer.name LIKE 'cheng'"
+]
+
 #def explain(diffInQuery, diffInPlan):
 def explain():
     explaination = ""
-
-    explaination += "With an additional of "
-    #diffInQuery[0] = Additional/Removal/Modify
-    #diffInQuery[1] = String of the changes
-
-    # if diffInQuery[0] == 'additional':
-    #     explaination += "an addition of"
-    # elif diffInQuery[0] == 'removal':
-    #     explaination += "a removal of"
-    # elif diffInQuery[0] == 'modify':
-    #     explaination += "modification of"
-
+    
+    # Define removed/modified/added
+    status_regex = re.compile(r'(Removed|Modified|Added):\s*')
+    diff_regex = re.compile(r':\s*(.*)')
     # Define regular expressions for each component type
-    #Comparison Operators(=, <, >, !=, <=, >=, <>)
-    comparison_regex = re.compile(r"([\w\.]+)\s*(=|!=|<|>|<=|>=|<>)\s*('[\w-]+'|[\w\.]+)")
-    #Logical Operators(ALL, AND, ANY, BETWEEN, EXISTS, IN, LIKE, NOT, OR, SOME)
+    comparison_regex = re.compile(r"([\w\.]+)\s*(=|!=|<|>|<=|>=|<>|LIKE)\s*('[\w-]+'|[\w\.]+)")
     logical_regex = re.compile(r"\b(ALL|AND|ANY|BETWEEN|EXISTS|IN|LIKE|NOT|OR|SOME)\b")
-    #Constant Value
     constant_regex = re.compile(r"'([^']*)'")
-    #Arithmatic Operators(+, -, *, /, %)
     arithmetic_regex = re.compile(r"(?<!['])\b([\w\.]+)\b\s*([+\-*\/%])\s*(?<!['])\b([\w\.]+)\b(?!['])")
-    # #Bitwise Operators(&, |, ^)
-    # bitwise_regex = re.compile(r"([\w\.]+)\s*(&|\||\^)\s*([\w\.]+)")
-    # #Compound Operators(+=, -=, *=, /=, %=, &=, ^-=, |*=)
-    # compound_regex = re.compile(r"([\w\.]+)\s*(\+=|-=|\*=|\/=|%=|&=|\^=|\|=)\s*([\w\.]+)")
-    #Tuple Attribute References
     tuple_attr_regex = re.compile(r"([\w\._]+)(?=[\s]*[=<>])")
 
-
-    # Define the input string
-    #input_str = diffInQuery[1]
-    #input_str = "AND n_regionkey = r_regionkey AND r_name = 'ASIA' AND o_orderdate >= '1994-01-01'"
-    input_str = "C.c_custkey = O.o_custkey AND C.c_name LIKE 'cheng'"
-
-    # Initialize lists to store each type of expression
-    comparisons = []
-    logicals = []
-    arithmetic_ops = []
-    # bitwise = []
-    # compound = []
-    constant_values = []
-    tuple_attrs = []
-
-    comparison_matches = comparison_regex.findall(input_str)
-    for match in comparison_matches:
-        comparisons.append(match)
-
-    logical_matches = logical_regex.findall(input_str)
-    for match in logical_matches:
-        logicals.append(match)
-
-    arithmetic_matches = arithmetic_regex.findall(input_str)
-    for match in arithmetic_matches:
-        arithmetic_ops.append(match)
-
-    # bitwise_matches = bitwise_regex.findall(input_str)
-    # for match in bitwise_matches:
-    #     bitwise.append(match)
-    
-    # compound_matches = compound_regex.findall(input_str)
-    # for match in compound_matches:
-    #     compound.append(match)
-
-    constant_matches = constant_regex.findall(input_str)
-    for match in constant_matches:
-        constant_values.append(match)
-
-    tuple_attr_matches = tuple_attr_regex.findall(input_str)
-    for match in tuple_attr_matches:
-        tuple_attrs.append(match)
-
-    # Print the resulting lists
     count = 0
-    if comparisons:
-        print("Comparisons:", comparisons)
-        explaination += "comparisons between "
-        for i in comparisons:
-            explaination += str(i) + " "
-        count = 1
-    if logicals:
-        print("Logicals:", logicals)
+    for item in diffInQuery:
         if count == 1:
-            explaination += "and "
-        explaination += "logical operators such as: "
-        for i in logicals:
-            explaination += str(i) + " "
-        count = 1
-    if arithmetic_ops:
-        print("Arithmetic Operations:", arithmetic_ops)
-    if constant_values:
-        print("Constant Values:", constant_values)
-    if tuple_attrs:
-        print("Tuple Attrs:", tuple_attrs)
+            explaination += "and with "
+        else:
+            explaination += "With "
+        status_match = status_regex.match(item)
+        if status_match:
+            status = status_match.group(1)
+            if status == 'Added':
+                explaination += "an addition of "
+            elif status == 'Removed':
+                explaination += "the removal of "
+            elif status == 'Modified':
+                explaination += "modification of "
+            diff_match = diff_regex.search(item)
+            count = 1
+            if diff_match:
+                diff = diff_match.group(1)
+                #print(f"Status: {status}, Diff: {diff}")
+                input_str = diff
+        
+        # Initialize lists to store each type of expression
+        comparisons = []
+        logicals = []
+        arithmetic_ops = []
+        constant_values = []
+        tuple_attrs = []
+
+        comparison_matches = comparison_regex.findall(input_str)
+        for match in comparison_matches:
+            comparisons.append(match)
+
+        logical_matches = logical_regex.findall(input_str)
+        for match in logical_matches:
+            logicals.append(match)
+
+        arithmetic_matches = arithmetic_regex.findall(input_str)
+        for match in arithmetic_matches:
+            arithmetic_ops.append(match)
+
+        constant_matches = constant_regex.findall(input_str)
+        for match in constant_matches:
+            constant_values.append(match)
+
+        tuple_attr_matches = tuple_attr_regex.findall(input_str)
+        for match in tuple_attr_matches:
+            tuple_attrs.append(match)
+
+        # Print the resulting lists
+        print("Comparisons:", comparisons)
+        count1 = 0
+        if status == 'Modified':
+            explaination += "join condition changes from "
+            for i in comparisons:
+                explaination += " ".join(str(j) for j in i) + " "
+                if count1 == 0:
+                    explaination += "to "
+                count1 = 1
+        else:
+            explaination += "join condition between "
+            for i in comparisons:
+                explaination += " ".join(str(j) for j in i) + " "
+
 
     #diffInPlan = Selection/Join/Projection
     
@@ -115,6 +104,7 @@ def explain():
             #Index-Based Join:
                 #Clustered
                 #Uncluctered
+    explaination = explaination.replace("(", "").replace(")", "").replace("'", "")
     print(explaination)
 
 explain()
