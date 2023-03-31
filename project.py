@@ -247,7 +247,7 @@ def getDiff(sql1, sql2):
                 str1 = ' '.join(sublist1[i1:i2])
                 str2 = ' '.join(sublist2[j1:j2])
                 if tag == 'replace':
-                    diff['Modified'].extend([[str1],[str2]])
+                    diff['Modified'].extend([[str1,str2]])
                 elif tag == 'delete':
                     diff['Removed'].extend([str1])
                 elif tag == 'insert':
@@ -270,5 +270,5 @@ if __name__ == "__main__":
     # print(q1.IsEqual(q2))
     # print(q2[1])
     q1 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"
-    q2 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1996-01-01' and c_acctbal > 20  group by n_name order by revenue desc;"
+    q2 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and o_orderdate >= '1994-01-01' and o_orderdate < '1996-01-01' and c_acctbal > 10 and s_acctbal > 10 group by n_name order by revenue desc;"
     print(getDiff(q1,q2))           
