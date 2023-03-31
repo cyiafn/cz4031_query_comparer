@@ -28,10 +28,6 @@ def explain():
     diff_regex = re.compile(r':\s*(.*)')
     # Define regular expressions for each component type
     comparison_regex = re.compile(r"([\w\.]+)\s*(=|!=|<|>|<=|>=|<>|LIKE)\s*('[\w-]+'|[\w\.]+)")
-    logical_regex = re.compile(r"\b(ALL|AND|ANY|BETWEEN|EXISTS|IN|LIKE|NOT|OR|SOME)\b")
-    constant_regex = re.compile(r"'([^']*)'")
-    arithmetic_regex = re.compile(r"(?<!['])\b([\w\.]+)\b\s*([+\-*\/%])\s*(?<!['])\b([\w\.]+)\b(?!['])")
-    tuple_attr_regex = re.compile(r"([\w\._]+)(?=[\s]*[=<>])")
 
     count = 0
     for item in diff:
@@ -57,30 +53,10 @@ def explain():
         
         # Initialize lists to store each type of expression
         comparisons = []
-        logicals = []
-        arithmetic_ops = []
-        constant_values = []
-        tuple_attrs = []
 
         comparison_matches = comparison_regex.findall(input_str)
         for match in comparison_matches:
             comparisons.append(match)
-
-        logical_matches = logical_regex.findall(input_str)
-        for match in logical_matches:
-            logicals.append(match)
-
-        arithmetic_matches = arithmetic_regex.findall(input_str)
-        for match in arithmetic_matches:
-            arithmetic_ops.append(match)
-
-        constant_matches = constant_regex.findall(input_str)
-        for match in constant_matches:
-            constant_values.append(match)
-
-        tuple_attr_matches = tuple_attr_regex.findall(input_str)
-        for match in tuple_attr_matches:
-            tuple_attrs.append(match)
 
         # Print the resulting lists
         print("Comparisons:", comparisons)
