@@ -7,7 +7,6 @@ diffInQuery = {
     'Added': ["AND s_acctbal < 500"]
     #'Added': ["AND c.c_name LIKE '%cheng'"]
 }
-
 # query_1 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey"
 # query_2 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey AND c.c_name LIKE '%cheng'"
 
@@ -31,13 +30,12 @@ diffInQueryPlan = {
     'diffInSortNode': [],
     'diffInPlan': []
 }
+queries_subset = []
 
-changes = []
-original = []
-toggle = 0
 #def explain(diffInQuery, diffInPlan):
 def explain():
     queryplann(output)
+    gettingAdd()
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
@@ -85,13 +83,13 @@ def explain():
                 count1 += 1
         count = 1
         if status == "Added":
-            explaination += ",extra filter are needed to be applied on tables during "
-            for i in set(diffInQueryPlan["diffInScanNode"]):
+            explaination += ",extra filter are needed during "
+            for i in (queries_subset):
                 explaination += i
                 if size1 == 1:
                     explaination += ". "
                 else:
-                    explaination += " or "
+                    explaination += " and "
                     size1 -= 1
         elif status == "Removed":
             explaination += ",lesser to none filter are required for scans. "
@@ -126,52 +124,50 @@ def explain():
         else:
             explaination += " and "
             size -= 1
-    explaination = explaination.replace("(", "").replace(")", "").replace("'", "")
+    explaination = explaination.replace("(", "").replace(")", "").replace("'", "").replace("::numeric", "").replace("~~", "LIKE").replace("::text", "")
     print(explaination)
+    print(queries_subset)
     
 def queryplann(output):
-    global toggle
     if output[2] == None:
         print("No changes to query plan")
     else:
         Query.append("Changes: ")
         print_nodes(output[2])
-        toggle = 1
-        print(" ")
-        Query.append("Original: ")
-        print_nodes(output[1])
 
-    # Split the original list into two separate lists
-    for i, item in enumerate(Query):
-        if item == "Changes: ":
-            changes = Query[i+1:]
-        elif item == "Original: ":
-            original = Query[i+1:]
-            break
-    original_idx = changes.index('Original: ')
-    changes = changes[:original_idx]
     for i in diffInQueryPlan:
         print(diffInQueryPlan[i])
-    #print("changes list are: " + str(changes))
-    #print("original list are: " + str(original))
     
 def print_nodes(node):
     print(node.node)
     Query.append(node.node)
-    if type(node) == QueryPlanJoinNode and toggle == 0:
+    if type(node) == QueryPlanJoinNode:
             #print(node.JoinCond)
         diffInQueryPlan["diffInJoinNode"].append(node.node)
-    if type(node) == QueryPlanScanNode and toggle == 0:
-        diffInQueryPlan["diffInScanNode"].append(node.node)
-    if type(node) == QueryPlanSortNode and toggle == 0:
+    if type(node) == QueryPlanScanNode:
+        if node.Filter != "":
+            diffInQueryPlan["diffInScanNode"].append(node.Filter + "- " + node.node +" on: " + node.RelationName)
+    if type(node) == QueryPlanSortNode:
         diffInQueryPlan["diffInSortNode"].append(node.node)
-    if type(node) == QueryPlanGroupNode and toggle == 0:
+    if type(node) == QueryPlanGroupNode:
         diffInQueryPlan["diffInGroupNode"].append(node.node)
-    if type(node) == QueryPlanNode and toggle == 0:
+    if type(node) == QueryPlanNode:
         diffInQueryPlan["diffInPlan"].append(node.node)
     if node.left:
         print_nodes(node.left)
     if node.right:
         print_nodes(node.right)
+
+def gettingAdd():
+    global queries_subset
+    matching_indices = []
+    for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
+        for q in diffInQuery["Added"]:
+            if q in s.replace("(", "").replace(")", "").replace("'", ""):
+                matching_indices.append(i)
+
+    queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
+    queries_subset = [s.split('-')[1].strip() for s in queries_subset]
+    print(queries_subset)
 
 explain()
