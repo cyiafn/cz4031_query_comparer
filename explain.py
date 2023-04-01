@@ -3,84 +3,62 @@ import re
 
 diffInQuery = {
     'Removed': ["AND r_name = 'ASIA'", 'AND s_acctbal > 20'],
-    'Modified': [["  AND o_orderdate < '1995-01-01'"], ["  AND o_orderdate < '1996-01-01'"], ['  AND s_acctbal > 20'], ['  AND s_acctbal > 10']],
-    'Added': ["AND customer.name LIKE 'cheng'"]
+    'Modified': [["  AND o_orderdate < '1995-01-01'", "  AND o_orderdate < '1996-01-01'"], ['  AND s_acctbal > 20', '  AND s_acctbal > 10']],
+    'Added': ["AND customer.name LIKE 'cheng'", 'OR s_acctbal > 20']
 }
 
+diffInPlan = []
 #def explain(diffInQuery, diffInPlan):
 def explain():
-    diff = []
-    for key, value in diffInQuery.items():
-        diff.append(f"{key}: {str(value)}")
-
-    diff = [s.replace("'", "\'") for s in diff]
-
-    for i in range(len(diff)):
-        diff[i] = diff[i].replace("[[", "[").replace("]]", "]")
-        if "[" in diff[i]:
-            diff[i] = diff[i][:-1] + "', " + diff[i][-1]
-        else:
-            diff[i] = diff[i][:-1] + "']" + diff[i][-1]
     explaination = ""
-    
-    # Define removed/modified/added
-    status_regex = re.compile(r'(Removed|Modified|Added):\s*')
-    diff_regex = re.compile(r':\s*(.*)')
-    # Define regular expressions for each component type
-    comparison_regex = re.compile(r"([\w\.]+)\s*(=|!=|<|>|<=|>=|<>|LIKE)\s*('[\w-]+'|[\w\.]+)")
+    filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
     count = 0
-    for item in diff:
+    for status, values in diffInQuery.items():
         if count == 1:
             explaination += "and with "
         else:
             explaination += "With "
-        status_match = status_regex.match(item)
-        if status_match:
-            status = status_match.group(1)
-            if status == 'Added':
-                explaination += "an addition of "
-            elif status == 'Removed':
-                explaination += "the removal of "
-            elif status == 'Modified':
-                explaination += "modification of "
-            diff_match = diff_regex.search(item)
-            count = 1
-            if diff_match:
-                diff = diff_match.group(1)
-                #print(f"Status: {status}, Diff: {diff}")
-                input_str = diff
-        
-        # Initialize lists to store each type of expression
-        comparisons = []
 
-        comparison_matches = comparison_regex.findall(input_str)
-        for match in comparison_matches:
-            comparisons.append(match)
+        if status == "Added":
+            explaination += "an addition of "
+        elif status == "Removed":
+            explaination += "the removal of "
+        elif status == "Modified":
+            explaination += "modification of "
 
-        # Print the resulting lists
-        print("Comparisons:", comparisons)
         count1 = 0
-        if status == 'Modified':
-            explaination += "join condition that changes from "
-            for i in comparisons:
-                if count1%2 == 0 and count1 != 0:
-                    explaination += "and "
-                    count1 = 0
-                for j in i:
-                    explaination += (str(j)) + " "
+        for value in values:
+            if status == "Modified":
                 if count1 == 0:
-                    explaination += "to "
-                count1 += 1
-        else:
-            explaination += "join condition such as "
-            for i in comparisons:
-                if count1%2 == 1:
+                    explaination += "join condition that changes from "
+                if count1 % 2 == 0 and count1 != 0:
                     explaination += "and "
                     count1 = 0
-                explaination += " ".join(str(j) for j in i) + " "
+                match_to = re.search(filter_exp, value[0])
+                match_from = re.search(filter_exp, value[1])
+
+                if match:
+                    explaination += f"{match_to.group(1)} to {match_from.group(1)} "
+                count1 += 2
+            else:
+                if count1 == 0:
+                    explaination += "join condition such as "
+                if count1 % 2 == 1:
+                    explaination += "and "
+                    count1 = 0
+
+                match = re.search(filter_exp, value)
+                if match:
+                    explaination += f"{match.group(1)} "
+
                 count1 += 1
 
+        count = 1
+
+    explaination = explaination.replace("(", "").replace(")", "").replace("'", "")
+    print(explaination)
+    #SELECT n_name, o_year, sum(amount) AS sum_profit FROM(SELECT n_name, DATE_PART('YEAR',o_orderdate) AS o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%' AND s_acctbal > 10 AND ps_supplycost > 100 ) AS profit GROUP BY n_name, o_year ORDER BY n_name, o_year desc
 
     query_1 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey"
     query_2 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey AND c.c_name LIKE '%cheng'"
@@ -90,14 +68,26 @@ def explain():
 
     q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
     q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
+    
+    output = q_plan_1_nodes.IsEqual(q_plan_2_nodes)
+    print_nodes(output[1])
+    print(diffInPlan)
+    
+def print_nodes(node):
+    print(node.node)
+    if type(node) == QueryPlanJoinNode:
+        #print(node.JoinCond)
+        diffInPlan.append("Changes: " + node.node + " between " + node.JoinCond + " ")
+    if node.left:
+        print_nodes(node.left)
+    if node.right:
+        print_nodes(node.right)
 
-    #print(q_plan_1_nodes.root.JoinCond)
-    #print(q_plan_1_nodes.root.node)
-    #print_nodes(q_plan_1_nodes.root)
-    #build_tree_diff(q_plan_1_nodes.root)
+explain()
+
+
 
     #diffInPlan = Selection/Join/Projection
-    # queryTwo = QueryPlan.root.getJoinConditions()
 
     #Types of Join:
         #Types of Nested Loop(NL) Join:
@@ -114,26 +104,3 @@ def explain():
             #Index-Based Join:
                 #Clustered
                 #Uncluctered
-
-    explaination += ",the query plan uses sort-merge join instead. \nBecause,"
-    explaination = explaination.replace("(", "").replace(")", "").replace("'", "")
-    print(explaination)
-
-def print_nodes(node):
-    if node is None:
-        return
-    print(node)
-    print_nodes(node.left)
-    print_nodes(node.right)
-
-def build_tree_diff(node, parent=None):
-    current_node = node, parent=parent
-    print(current_node)
-    if node.left:
-        build_tree_diff(node.left, parent=current_node)
-    if node.right:
-        build_tree_diff(node.right, parent=current_node)
-
-    return current_node  
-
-explain()
