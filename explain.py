@@ -124,9 +124,10 @@ def explain():
         else:
             explaination += " and "
             size -= 1
+    for i in set(diffInQueryPlan["diffInSortNode"]):
+        explaination += i + " ."
     explaination = explaination.replace("(", "").replace(")", "").replace("'", "").replace("::numeric", "").replace("~~", "LIKE").replace("::text", "")
     print(explaination)
-    print(queries_subset)
     
 def queryplann(output):
     if output[2] == None:
@@ -139,7 +140,6 @@ def queryplann(output):
         print(diffInQueryPlan[i])
     
 def print_nodes(node):
-    print(node.node)
     Query.append(node.node)
     if type(node) == QueryPlanJoinNode:
             #print(node.JoinCond)
@@ -168,6 +168,5 @@ def gettingAdd():
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
     queries_subset = [s.split('-')[1].strip() for s in queries_subset]
-    print(queries_subset)
 
 explain()
