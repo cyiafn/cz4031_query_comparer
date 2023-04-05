@@ -1,10 +1,9 @@
-import difflib
 import PySimpleGUI as sg
 from anytree import Node
 from anytree.exporter import UniqueDotExporter
 import sqlparse
 from explain import explain
-from project import SQL_KEYWORDS, QueryPlan, QueryPlanNode, getDiff, parseSQL, query
+from project import QueryPlan, QueryPlanNode, getDiff, query
 import os
 
 os.environ["PATH"] += os.pathsep + "Graphviz/bin"  # Set Graphviz PATH
@@ -191,16 +190,17 @@ def compare_btn(window: sg.Window, event, values):
 
         diff_query = getDiff(query_1, query_2)
         highlight_text(window, diff_query, query_2)
+        explaination = ""
 
         if not equal:
             tree_1 = build_tree(q_plan_1_nodes.root)
             tree_2 = build_tree(q_plan_2_nodes.root, diff=output[1])
             explaination = explain(diff_query,output)
-            window["-EXPLAINATION-"].update(explaination)
         else:
             tree_1 = build_tree(q_plan_1_nodes.root)
             tree_2 = build_tree(q_plan_2_nodes.root)
 
+        window["-EXPLAINATION-"].update(explaination)
         # Export tree to PNG file using UniqueDotExporter
         filename_1 = "tree_1.png"
         filename_2 = "tree_2.png"
@@ -275,6 +275,3 @@ def start_ui() -> None:
             window[event].Widget.tag_remove("highlight", "1.0", "end")
 
     window.close()
-
-
-start_ui()
