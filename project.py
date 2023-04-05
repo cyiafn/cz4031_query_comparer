@@ -3,7 +3,8 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import psycopg2
 import sqlparse
-import difflib
+import difflib 
+from string import whitespace
 
 SQL_KEYWORDS = set(
     "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
@@ -231,33 +232,47 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
 def getDiff(sql1, sql2):
     sql1_formatted, list1 = parseSQL(sql1)
     sql2_formatted, list2 = parseSQL(sql2)
-    print(list1)
-    print(list2)
-    diff = []
+    diff = {}
     for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
-        #print(sublist1,sublist2)
+        
+        for i in range(len(sublist1)):
+            sublist1[i] = sublist1[i].replace(",","")
+        for i in range(len(sublist2)):
+            sublist2[i] = sublist2[i].replace(",","")
+        
+        diff['Modified'] = []
+        diff['Removed'] = []
+        diff['Added'] = []
         if sublist1 != sublist2:
             sm = difflib.SequenceMatcher(lambda x: x in SQL_KEYWORDS, sublist1, sublist2)
-            for tag, i1, i2, j1, j2 in sm.get_opcodes():
-                sublist1[0]    
+            for tag, i1, i2, j1, j2 in sm.get_opcodes():               
+                str1 = ' '.join(sublist1[i1:i2])
+                str2 = ' '.join(sublist2[j1:j2])
                 if tag == 'replace':
-                    diff.append(f' Modified: {sublist1[i1:i2][0].replace("/", "")} => {sublist2[j1:j2][0].replace("/", "")}')
+                    diff['Modified'].extend([[str1],[str2]])
                 elif tag == 'delete':
-                    diff.append(f' Removed: {sublist1[i1:i2][0].replace("/", "")}')
+                    diff['Removed'].extend([str1])
                 elif tag == 'insert':
-                    diff.append(f' Added: {sublist2[j1:j2][0].replace("/", "")}')
+                    diff['Added'].extend([str1])
               
+               
     return diff
 
 
 
 
 if __name__ == "__main__":
-    # print(parseSQL(
-    #     "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"))
-    plan = query(
-        "SELECT n_name, o_year, sum(amount) AS sum_profit FROM(SELECT n_name, DATE_PART('YEAR',o_orderdate) AS o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%' AND s_acctbal > 10 AND ps_supplycost > 100 ) AS profit GROUP BY n_name, o_year ORDER BY n_name, o_year DESC")
-    q1 = QueryPlan(plan["Plan"])
-    plan = query(
-        "SELECT n_name, o_year, sum(amount) AS sum_profit FROM(SELECT n_name, DATE_PART('YEAR',o_orderdate) AS o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%' AND s_acctbal > 10 AND ps_supplycost > 101 ) AS profit GROUP BY n_name, o_year ORDER BY n_name, o_year DESC")
-    q2 = QueryPlan(plan["Plan"])
+    print(parseSQL(
+        "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"))
+    # plan = query(
+    #     "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
+    # q1 = QueryPlan(plan["Plan"])
+    # plan = query(
+    #     "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;")
+    # q2 = QueryPlan(plan["Plan"])
+    #
+    # print(q1.IsEqual(q2))
+    # print(q2[1])
+    q1 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1995-01-01' and c_acctbal > 10 and s_acctbal > 20 group by n_name order by revenue desc;"
+    q2 = "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue from customer, orders, lineitem, supplier, nation, region where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'ASIA' and o_orderdate >= '1994-01-01' and o_orderdate < '1996-01-01' and c_acctbal > 20  group by n_name order by revenue desc;"
+    print(getDiff(q1,q2))           
