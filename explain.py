@@ -1,27 +1,6 @@
 from project import *
 import re
 
-diffInQuery = {
-    'Removed': ["s_suppkey = l_suppkey", "AND ps_suppkey = l_suppkey", "AND ps_partkey = l_partkey" ],
-    'Modified': [[" AND s_acctbal > 10", " AND s_acctbal > 15"]],
-    'Added': ["AND s_acctbal < 500"]
-    #'Added': ["AND c.c_name LIKE '%cheng'"]
-}
-# query_1 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey"
-# query_2 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey AND c.c_name LIKE '%cheng'"
-
-
-query_1 = "SELECT n_name, o_year, sum(amount) AS sum_profit FROM(SELECT n_name, DATE_PART('YEAR',o_orderdate) AS o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%' AND s_acctbal > 10 AND ps_supplycost > 100 ) AS profit GROUP BY n_name, o_year ORDER BY n_name, o_year desc"
-query_2 = "SELECT n_name, o_year, sum(amount) AS sum_profit FROM(SELECT n_name, DATE_PART('YEAR',o_orderdate) AS o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%' AND s_acctbal > 15 AND ps_supplycost > 100 AND s_acctbal < 500) AS profit GROUP BY n_name, o_year ORDER BY n_name, o_year desc"
-
-q_plan_1 = query(query_1)
-q_plan_2 = query(query_2)
-
-q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
-q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
-    
-output = q_plan_1_nodes.IsEqual(q_plan_2_nodes)
-
 Query = []
 diffInQueryPlan = {
     'diffInJoinNode': [],
@@ -32,10 +11,10 @@ diffInQueryPlan = {
 }
 queries_subset = []
 
-#def explain(diffInQuery, diffInPlan):
-def explain():
-    queryplann(output)
-    gettingAdd()
+def explain(diffInQuery, diffInPlan):
+    queryplann(diffInPlan)
+    gettingAdd(diffInQuery)
+
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
@@ -66,7 +45,7 @@ def explain():
                 match_to = re.search(filter_exp, value[0])
                 match_from = re.search(filter_exp, value[1])
 
-                if match:
+                if match_to and match_from:
                     explaination += f"{match_to.group(1)} to {match_from.group(1)} "
                 count1 += 2
             else:
@@ -127,7 +106,7 @@ def explain():
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
     explaination = explaination.replace("(", "").replace(")", "").replace("'", "").replace("::numeric", "").replace("~~", "LIKE").replace("::text", "")
-    print(explaination)
+    return explaination
     
 def queryplann(output):
     if output[2] == None:
@@ -158,7 +137,7 @@ def print_nodes(node):
     if node.right:
         print_nodes(node.right)
 
-def gettingAdd():
+def gettingAdd(diffInQuery):
     global queries_subset
     matching_indices = []
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
@@ -168,5 +147,3 @@ def gettingAdd():
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
     queries_subset = [s.split('-')[1].strip() for s in queries_subset]
-
-explain()

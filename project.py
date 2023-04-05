@@ -234,7 +234,6 @@ def getDiff(sql1, sql2):
     sql2_formatted, list2 = parseSQL(sql2)
     diff = {}
     for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
-        
         for i in range(len(sublist1)):
             sublist1[i] = sublist1[i].replace(",","")
         for i in range(len(sublist2)):
@@ -249,11 +248,11 @@ def getDiff(sql1, sql2):
                 str1 = ' '.join(sublist1[i1:i2])
                 str2 = ' '.join(sublist2[j1:j2])
                 if tag == 'replace':
-                    diff['Modified'].extend([[str1],[str2]])
+                    diff['Modified'].extend([[str1,str2]])
                 elif tag == 'delete':
                     diff['Removed'].extend([str1])
                 elif tag == 'insert':
-                    diff['Added'].extend([str1])
+                    diff['Added'].extend([str2])
               
                
     return diff
