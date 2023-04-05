@@ -3,20 +3,29 @@ import re
 
 Query = []
 diffInQueryPlan = {
-    'diffInJoinNode': [],
-    'diffInScanNode': [],
-    'diffInGroupNode': [],
-    'diffInSortNode': [],
-    'diffInPlan': []
+    "diffInJoinNode": [],
+    "diffInScanNode": [],
+    "diffInGroupNode": [],
+    "diffInSortNode": [],
+    "diffInPlan": [],
 }
 queries_subset = []
 
+
 def explain(diffInQuery, diffInPlan):
+    # Remove Empty List
+    diffInQuery = {i: j for i, j in diffInQuery.items() if j != []}
+    print("diffInQuery:", diffInQuery)
+    print("diffInPlan:", diffInPlan)
+
     queryplann(diffInPlan)
     gettingAdd(diffInQuery)
 
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
+
+    print("diffInQueryPlan:", diffInQueryPlan)
+    print("queries_subset:", queries_subset)
 
     count = 0
     size = len(set(diffInQueryPlan["diffInJoinNode"]))
@@ -42,11 +51,13 @@ def explain(diffInQuery, diffInPlan):
                 if count1 % 2 == 0 and count1 != 0:
                     explaination += "and "
                     count1 = 0
-                match_to = re.search(filter_exp, value[0])
-                match_from = re.search(filter_exp, value[1])
+                match_to = re.search(filter_exp, " ".join(value[0].split()))
+                match_from = re.search(filter_exp, " ".join(value[1].split()))
 
                 if match_to and match_from:
-                    explaination += f"{match_to.group(1)} to {match_from.group(1)} "
+                    explaination += (
+                        f"\"{match_to.group(1)}' to '{match_from.group(1)}\" "
+                    )
                 count1 += 2
             else:
                 if count1 == 0:
@@ -55,15 +66,16 @@ def explain(diffInQuery, diffInPlan):
                     explaination += "and "
                     count1 = 0
 
-                match = re.search(filter_exp, value)
+                match = re.search(filter_exp, " ".join(value.split()))
                 if match:
-                    explaination += f"{match.group(1)} "
+                    explaination += f'"{match.group(1)}" '
 
                 count1 += 1
         count = 1
         if status == "Added":
-            explaination += ",extra filter are needed during "
-            for i in (queries_subset):
+            explaination = explaination.rstrip()
+            explaination += ", extra filter are needed during "
+            for i in queries_subset:
                 explaination += i
                 if size1 == 1:
                     explaination += ". "
@@ -71,9 +83,11 @@ def explain(diffInQuery, diffInPlan):
                     explaination += " and "
                     size1 -= 1
         elif status == "Removed":
-            explaination += ",lesser to none filter are required for scans. "
+            explaination = explaination.rstrip()
+            explaination += ", lesser to none filter are required for scans. "
         elif status == "Modified":
-            explaination += ",extra filtering is not needed. "
+            explaination = explaination.rstrip()
+            explaination += ", extra filtering is not needed. "
     for i in set(diffInQueryPlan["diffInPlan"]):
         if i == "Gather Merge":
             explaination += "The query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
@@ -105,9 +119,9 @@ def explain(diffInQuery, diffInPlan):
             size -= 1
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
-    explaination = explaination.replace("(", "").replace(")", "").replace("'", "").replace("::numeric", "").replace("~~", "LIKE").replace("::text", "")
     return explaination
-    
+
+
 def queryplann(output):
     if output[2] == None:
         print("No changes to query plan")
@@ -117,15 +131,18 @@ def queryplann(output):
 
     for i in diffInQueryPlan:
         print(diffInQueryPlan[i])
-    
+
+
 def print_nodes(node):
     Query.append(node.node)
     if type(node) == QueryPlanJoinNode:
-            #print(node.JoinCond)
+        # print(node.JoinCond)
         diffInQueryPlan["diffInJoinNode"].append(node.node)
     if type(node) == QueryPlanScanNode:
         if node.Filter != "":
-            diffInQueryPlan["diffInScanNode"].append(node.Filter + "- " + node.node +" on: " + node.RelationName)
+            diffInQueryPlan["diffInScanNode"].append(
+                node.Filter + "- " + node.node + " on: " + node.RelationName
+            )
     if type(node) == QueryPlanSortNode:
         diffInQueryPlan["diffInSortNode"].append(node.node)
     if type(node) == QueryPlanGroupNode:
@@ -137,13 +154,16 @@ def print_nodes(node):
     if node.right:
         print_nodes(node.right)
 
+
 def gettingAdd(diffInQuery):
     global queries_subset
     matching_indices = []
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
         for q in diffInQuery["Added"]:
+            print("s:", s)
+            print("q:", q)
             if q in s.replace("(", "").replace(")", "").replace("'", ""):
                 matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
-    queries_subset = [s.split('-')[1].strip() for s in queries_subset]
+    queries_subset = [s.split("-")[1].strip() for s in queries_subset]

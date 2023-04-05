@@ -3,13 +3,15 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import psycopg2
 import sqlparse
-import difflib 
+import difflib
 from string import whitespace
 import interface
 
 SQL_KEYWORDS = set(
     "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
-        ", "))
+        ", "
+    )
+)
 
 
 # Query Tree Nodes =======================================================
@@ -17,7 +19,9 @@ class QueryPlanNode:
     def __init__(self, node: Dict[str, Any], left=None, right=None):
         self.node: str = node["Node Type"]
         self.totalCost: int = node["Total Cost"]
-        self.ParentRelation: str = node["Parent Relationship"] if "Parent Relationship" in node else ""
+        self.ParentRelation: str = (
+            node["Parent Relationship"] if "Parent Relationship" in node else ""
+        )
         self.left: QueryPlanNode = left
         self.right: QueryPlanNode = right
 
@@ -31,7 +35,12 @@ class QueryPlanNode:
 
 
 class QueryPlanSortNode(QueryPlanNode):
-    def __init__(self, node: Dict[str, Any], left: QueryPlanNode = None, right: QueryPlanNode = None):
+    def __init__(
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
+    ):
         super().__init__(node, left, right)
         self.SortKeys: List[str] = node["Sort Key"]
 
@@ -49,7 +58,12 @@ class QueryPlanSortNode(QueryPlanNode):
 
 
 class QueryPlanGroupNode(QueryPlanNode):
-    def __init__(self, node: Dict[str, Any], left: QueryPlanNode = None, right: QueryPlanNode = None):
+    def __init__(
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
+    ):
         super().__init__(node, left, right)
         self.GroupKeys: List[str] = node["Group Key"]
 
@@ -67,7 +81,12 @@ class QueryPlanGroupNode(QueryPlanNode):
 
 
 class QueryPlanJoinNode(QueryPlanNode):
-    def __init__(self, node: Dict[str, Any], left: QueryPlanNode = None, right: QueryPlanNode = None):
+    def __init__(
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
+    ):
         super().__init__(node, left, right)
         self.JoinType: str = node["Join Type"]
         self.JoinCond: str = self.generateJoinCond(node)
@@ -90,11 +109,20 @@ class QueryPlanJoinNode(QueryPlanNode):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanJoinNode):
             return False
-        return super().__eq__(other) and self.JoinType == other.JoinType and self.JoinCond == other.JoinCond
+        return (
+            super().__eq__(other)
+            and self.JoinType == other.JoinType
+            and self.JoinCond == other.JoinCond
+        )
 
 
 class QueryPlanScanNode(QueryPlanNode):
-    def __init__(self, node: Dict[str, Any], left: QueryPlanNode = None, right: QueryPlanNode = None):
+    def __init__(
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
+    ):
         super().__init__(node, left, right)
         self.RelationName: str = node["Relation Name"]
         self.IndexName: str = node["Index Name"] if "Index Name" in node else ""
@@ -111,9 +139,13 @@ class QueryPlanScanNode(QueryPlanNode):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanScanNode):
             return False
-        return super().__eq__(other) and self.RelationName == other.RelationName and \
-            self.IndexName == other.IndexName and self.IndexCond == other.IndexCond and \
-            self.Filter == other.Filter
+        return (
+            super().__eq__(other)
+            and self.RelationName == other.RelationName
+            and self.IndexName == other.IndexName
+            and self.IndexCond == other.IndexCond
+            and self.Filter == other.Filter
+        )
 
 
 # Query Tree =======================================================
@@ -147,8 +179,9 @@ class QueryPlan:
         if not isinstance(other, QueryPlan):
             return False, self.root, other.root
 
-        def isEq(node1: QueryPlanNode, node2: QueryPlanNode) -> Tuple[
-            bool, Optional[QueryPlanNode], Optional[QueryPlanNode]]:
+        def isEq(
+            node1: QueryPlanNode, node2: QueryPlanNode
+        ) -> Tuple[bool, Optional[QueryPlanNode], Optional[QueryPlanNode]]:
             if node1 is None and node2 is None:
                 return True, None, None
             if node1 is None or node2 is None:
@@ -192,11 +225,13 @@ def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
 
 # SQL =====
 def parseSQL(sqlQuery: str) -> Tuple[str, List[List[str]]]:
-    formattedSQL = sqlparse.format(sqlQuery, reindent=True, keyword_case='upper', strip_comments=True)
+    formattedSQL = sqlparse.format(
+        sqlQuery, reindent=True, keyword_case="upper", strip_comments=True
+    )
     return formattedSQL, groupFormattedSQLByClause(formattedSQL)
 
 
-'''
+"""
 This group is as such, if there is a keyword (non-operator) such as SELECT, WHERE, FROM,
 then we will form a new group. Otherwise, we will append the line to the previous group.
 
@@ -212,7 +247,7 @@ Will be grouped as such:
 Note that the spaces are preserved.
 
 This might serve as a more useful format for us to parse the SQL for differences.
-'''
+"""
 
 
 def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
@@ -229,36 +264,36 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
 
     groupedSQL.append(tempGroup)
     return groupedSQL
- 
-def getDiff(sql1, sql2):
-    sql1_formatted, list1 = parseSQL(sql1)
-    sql2_formatted, list2 = parseSQL(sql2)
+
+
+def getDiff(sql1: str, sql2: str) -> dict:
+    _, list1 = parseSQL(sql1)
+    _, list2 = parseSQL(sql2)
     diff = {}
     for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
         for i in range(len(sublist1)):
-            sublist1[i] = sublist1[i].replace(",","")
+            sublist1[i] = sublist1[i].replace(",", "")
         for i in range(len(sublist2)):
-            sublist2[i] = sublist2[i].replace(",","")
-        
-        diff['Modified'] = []
-        diff['Removed'] = []
-        diff['Added'] = []
+            sublist2[i] = sublist2[i].replace(",", "")
+
+        diff["Modified"] = []
+        diff["Removed"] = []
+        diff["Added"] = []
         if sublist1 != sublist2:
-            sm = difflib.SequenceMatcher(lambda x: x in SQL_KEYWORDS, sublist1, sublist2)
-            for tag, i1, i2, j1, j2 in sm.get_opcodes():               
-                str1 = ' '.join(sublist1[i1:i2])
-                str2 = ' '.join(sublist2[j1:j2])
-                if tag == 'replace':
-                    diff['Modified'].extend([[str1,str2]])
-                elif tag == 'delete':
-                    diff['Removed'].extend([str1])
-                elif tag == 'insert':
-                    diff['Added'].extend([str2])
-              
-               
+            sm = difflib.SequenceMatcher(
+                lambda x: x in SQL_KEYWORDS, sublist1, sublist2
+            )
+            for tag, i1, i2, j1, j2 in sm.get_opcodes():
+                str1 = " ".join(sublist1[i1:i2])
+                str2 = " ".join(sublist2[j1:j2])
+                if tag == "replace":
+                    diff["Modified"].extend([[str1, str2]])
+                elif tag == "delete":
+                    diff["Removed"].extend([str1])
+                elif tag == "insert":
+                    diff["Added"].extend([str2])
+
     return diff
-
-
 
 
 if __name__ == "__main__":
