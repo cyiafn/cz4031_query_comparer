@@ -1,10 +1,10 @@
+import difflib
 from configparser import ConfigParser
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Set
 
 import psycopg2
 import sqlparse
-import difflib
-from string import whitespace
+
 import interface
 
 SQL_KEYWORDS = set(
@@ -24,6 +24,15 @@ class QueryPlanNode:
         )
         self.left: QueryPlanNode = left
         self.right: QueryPlanNode = right
+
+    def __hash__(self):
+        return hash(
+            self.node + str(self.totalCost) + str(self.ParentRelation) + "true"
+            if self.left
+            else "false" + "true"
+            if self.right
+            else "false"
+        )
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanNode):
@@ -51,6 +60,9 @@ class QueryPlanSortNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"{super().__str__()}"
 
+    def __hash__(self):
+        return hash(str(super().__hash__()) + str(self.SortKeys))
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanSortNode):
             return False
@@ -70,6 +82,9 @@ class QueryPlanGroupNode(QueryPlanNode):
     @staticmethod
     def Am(node: Dict[str, any]) -> bool:
         return "Group Key" in node
+
+    def __hash__(self):
+        return hash(str(super().__hash__()) + str(self.GroupKeys))
 
     def __str__(self) -> str:
         return f"{super().__str__()}"
@@ -106,6 +121,9 @@ class QueryPlanJoinNode(QueryPlanNode):
     def __str__(self) -> str:
         return f"{super().__str__()}"
 
+    def __hash__(self):
+        return hash(str(super().__hash__()) + str(self.JoinType) + str(self.JoinCond))
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanJoinNode):
             return False
@@ -136,6 +154,15 @@ class QueryPlanScanNode(QueryPlanNode):
 
     def __str__(self) -> str:
         return f"{super().__str__()}"
+
+    def __hash__(self):
+        return hash(
+            str(super().__hash__())
+            + str(self.RelationName)
+            + str(self.IndexName)
+            + str(self.IndexCond)
+            + str(self.Filter)
+        )
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, QueryPlanScanNode):
@@ -176,25 +203,42 @@ class QueryPlan:
     def print(self) -> None:
         print(self.root)
 
-    def IsEqual(self, other) -> Tuple[bool, QueryPlanNode, QueryPlanNode]:
+    def isEq(
+        self,
+        node1: QueryPlanNode,
+        node2: QueryPlanNode,
+        leftTree: Set[QueryPlanNode],
+        rightTree: Set[QueryPlanNode],
+    ) -> None:
+        if node1 is None and node2 is None:
+            return
+        if node1 != node2:
+            if node1 is not None:
+                leftTree.add(node1)
+            if node2 is not None:
+                rightTree.add(node2)
+
+        self.isEq(
+            node1.left if node1 is not None else None,
+            node2.left if node2 is not None else None,
+            leftTree,
+            rightTree,
+        )
+        self.isEq(
+            node1.right if node1 is not None else None,
+            node2.right if node2 is not None else None,
+            leftTree,
+            rightTree,
+        )
+
+    def IsEqual(self, other) -> Tuple[bool, Set[QueryPlanNode], Set[QueryPlanNode]]:
         if not isinstance(other, QueryPlan):
-            return False, self.root, other.root
+            return False, {self.root}, {other.root}
 
-        def isEq(
-            node1: QueryPlanNode, node2: QueryPlanNode
-        ) -> Tuple[bool, Optional[QueryPlanNode], Optional[QueryPlanNode]]:
-            if node1 is None and node2 is None:
-                return True, None, None
-            if node1 is None or node2 is None:
-                return False, node1, node2
-            if type(node1) != type(node2):
-                return False, node1, node2
-            if node1 != node2:
-                return False, node1, node2
+        leftTree, rightTree = set(), set()
+        self.isEq(self.root, other.root, leftTree, rightTree)
 
-            return isEq(node1.left, node2.left) and isEq(node1.right, node2.right)
-
-        return isEq(self.root, other.root)
+        return len(leftTree) + len(rightTree) == 0, leftTree, rightTree
 
 
 # DB
@@ -299,3 +343,15 @@ def getDiff(sql1: str, sql2: str) -> dict:
 
 if __name__ == "__main__":
     interface.start_ui()
+    # plan = query(
+    #     "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_extendedprice > 100 group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;")
+    # q1 = QueryPlan(plan["Plan"])
+    # plan = query(
+    #     "select l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority from customer, orders, lineitem where c_mktsegment = 'BUILDING' and c_custkey = o_custkey and l_orderkey = o_orderkey and o_totalprice > 10 and l_extendedprice > 10 group by l_orderkey, o_orderdate, o_shippriority order by revenue desc, o_orderdate;")
+    # q2 = QueryPlan(plan["Plan"])
+
+    # a, b, c = q1.IsEqual(q2)
+    # for i in b:
+    #     print(str(b))
+    # for i in c:
+    #     print(str(c))
