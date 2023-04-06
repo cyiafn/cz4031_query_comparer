@@ -17,17 +17,23 @@ filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 def explain(diffInQuery, diffInPlan):
     # Remove Empty List
     diffInQuery = {i: j for i, j in diffInQuery.items() if j != []}
+    # for i in diffInQueryPlan:
+    #     diffInQueryPlan[i].clear
     print("diffInQuery:", diffInQuery)
     print("diffInPlan:", diffInPlan)
 
     print_nodes(diffInPlan)
     gettingAdd(diffInQuery)
-    table = joiningsplit()
+    table1 = []
+    table1.clear()
+    table1 = joiningsplit()
 
     explaination = ""
 
     print("diffInQueryPlan:", diffInQueryPlan)
     print("queries_subset:", queries_subset)
+    for i in diffInQueryPlan:
+        print(diffInQueryPlan[i])
 
     count = 0
     size = len(set(diffInQueryPlan["diffInJoinNode"]))
@@ -107,9 +113,9 @@ def explain(diffInQuery, diffInPlan):
     if size > 0:
         explaination += "\nSuch joined operation have been used: "
     for i in diffInQueryPlan["diffInJoinNode"]:
-        for x in range(0,len(table),2):
+        for x in range(0,len(table1),2):
             if x == 0:
-                explaination += "\nTable " + table[x] + " and table " + table[x+1] + " is joined using " + i.split("-")[0] + "with join condition" + i.split("-")[1] + ". "
+                explaination += "\nTable " + table1[x] + " and table " + table1[x+1] + " is joined using " + i.split("-")[0] + "with join condition" + i.split("-")[1] + ". "
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
 
@@ -126,11 +132,11 @@ def get_table_name(text):
     
 def joiningsplit() -> list:
     table = []
+    table.clear()
     for i in diffInQueryPlan["diffInJoinNode"]:
         temp = i.split("-")[1]
         table.append(get_table_name(temp.split("=")[0].strip()))
         table.append(get_table_name(temp.split("=")[1].strip()))
-
     return(table)
 
 
@@ -142,6 +148,8 @@ def format_string(text):
 
 
 def print_nodes(nodes):
+    for i in diffInQueryPlan:
+        diffInQueryPlan[i].clear()
     for node in nodes:
         Query.append(node.node)
         if type(node) == QueryPlanJoinNode and node.JoinCond != "":
