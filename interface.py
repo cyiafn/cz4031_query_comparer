@@ -266,7 +266,6 @@ def start_ui() -> None:
         elif event == "-COMPARE-":
             compare_btn(window, event, values)
         elif event == "-VIEW1-":
-            load_image(filename_2, (400, 300)).save(filename_2, format="PNG")
             sg.popup(
                 keep_on_top=True,
                 image="tree_1.png",
