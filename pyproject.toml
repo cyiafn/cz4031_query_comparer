@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.8"
 psycopg2-binary = "^2.9.5"
 sqlparse = "^0.4.3"
+anytree = "^2.8.0"
+pysimplegui = "^4.60.4"
 
 
 [build-system]
