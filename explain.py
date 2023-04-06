@@ -22,6 +22,7 @@ def explain(diffInQuery, diffInPlan):
 
     print_nodes(diffInPlan)
     gettingAdd(diffInQuery)
+    table = joiningsplit()
 
     explaination = ""
 
@@ -76,7 +77,7 @@ def explain(diffInQuery, diffInPlan):
             for i in queries_subset:
                 explaination += i
                 if size1 == 1:
-                    explaination += ". "
+                    explaination += ". \n"
                 else:
                     explaination += " and "
                     size1 -= 1
@@ -88,35 +89,30 @@ def explain(diffInQuery, diffInPlan):
             explaination += ", no extra filtering is needed. "
     for i in set(diffInQueryPlan["diffInPlan"]):
         if i == "Gather Merge":
-            explaination += "The query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
+            explaination += "\nThe query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
         elif i == "Gather":
-            explaination += "The query plan uses a Gather operation to distribute the scanning of the table among two parallel workers. "
+            explaination += "\nThe query plan uses a Gather operation to distribute the scanning of the table among two parallel workers. "
         elif i == "Hash":
-            explaination += "Hashing have been used. "
+            explaination += "\nHashing have been used. "
         elif i == "Sort":
-            explaination += "Sorting have been used. "
+            explaination += "\nSorting have been used. "
         elif i == "Materialize":
-            explaination += "The query plan uses Materialization to the process of creating an intermediate result set. This may be due to the size of the result set being too large to fit into memory or when multiple operations are performed on the same data. "
+            explaination += "\nThe query plan uses Materialization to the process of creating an intermediate result set. This maybe due to the size of the result set being too large to fit into memory or when multiple operations are performed on the same data. "
         elif i == "Memoize":
-            explaination += "The query plan uses Memoize to improve the performance of recursive queries. "
+            explaination += "\nThe query plan uses Memoize to improve the performance of recursive queries. "
         else:
-            explaination += "NEVER SEEN"
+            explaination += "\nThe query plan uses " + i + ". "
     for i in set(diffInQueryPlan["diffInGroupNode"]):
-        if i == "Aggregate":
-            explaination += "Grouping techniqes such as aggregation are used. "
-        else:
-            explaination += "NEVER SEEN"
+            explaination += "\nGrouping techniqes such as " + i + " are used. "
     if size > 0:
-        explaination += "Such joined operaion have been used: "
-    for i in set(diffInQueryPlan["diffInJoinNode"]):
-        explaination += i
-        if size == 1:
-            explaination += ". "
-        else:
-            explaination += " and "
-            size -= 1
+        explaination += "\nSuch joined operation have been used: "
+    for i in diffInQueryPlan["diffInJoinNode"]:
+        for x in range(0,len(table),2):
+            if x == 0:
+                explaination += "\nTable " + table[x] + " and table " + table[x+1] + " is joined using " + i.split("-")[0] + "with join condition" + i.split("-")[1] + ". "
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
+
     return explaination
 
 
@@ -127,6 +123,16 @@ def get_table_name(text):
         return match.group(1)
     else:
         return None
+    
+def joiningsplit() -> list:
+    table = []
+    for i in diffInQueryPlan["diffInJoinNode"]:
+        temp = i.split("-")[1]
+        table.append(get_table_name(temp.split("=")[0].strip()))
+        table.append(get_table_name(temp.split("=")[1].strip()))
+
+    return(table)
+
 
 
 def format_string(text):
@@ -138,10 +144,8 @@ def format_string(text):
 def print_nodes(nodes):
     for node in nodes:
         Query.append(node.node)
-        if type(node) == QueryPlanJoinNode:
-            print("Join Condition:", node.JoinCond)
-            print("Join Type:", node.JoinType)
-            diffInQueryPlan["diffInJoinNode"].append(node.node)
+        if type(node) == QueryPlanJoinNode and node.JoinCond != "":
+            diffInQueryPlan["diffInJoinNode"].append(node.node + " - " + node.JoinCond)
         if type(node) == QueryPlanScanNode:
             if node.Filter != "":
                 filter = format_string(node.Filter)
