@@ -29,14 +29,18 @@ query_column = [
     ],
 ]
 
-queryplan1_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN1IMAGE-")]]
-queryplan2_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN2IMAGE-")]]
+queryplan1_image = [[sg.Image(size=(400, 600), key="-QUERYPLAN1IMAGE-")]]
+queryplan2_image = [[sg.Image(size=(400, 600), key="-QUERYPLAN2IMAGE-")]]
 queryplanimage_column = [
     [sg.Text("Query Plan Visualization", font=("Helvitica", "16", "bold"))],
     [
         sg.Column(queryplan1_image, scrollable=True, key="-QUERYPLAN1IMAGECOLUMN-"),
         sg.Button("View", key="-VIEW1-"),
     ],
+]
+
+queryplanimage2_column = [
+    [sg.Text("", font=("Helvitica", "16", "bold"))],
     [
         sg.Column(queryplan2_image, scrollable=True, key="-QUERYPLAN2IMAGECOLUMN-"),
         sg.Button("View", key="-VIEW2-"),
@@ -83,6 +87,7 @@ layout = [
         # sg.Column(queryplan_column),
         sg.VSeperator(),
         sg.Column(queryplanimage_column),
+        sg.Column(queryplanimage2_column),
     ],
     [
         sg.Column(
@@ -260,7 +265,7 @@ def start_ui() -> None:
         event, values = window.read()
 
         if (
-                event == sg.WIN_CLOSED or event == "-QUIT-"
+            event == sg.WIN_CLOSED or event == "-QUIT-"
         ):  # if user closes window or clicks cancel
             break
         elif event == "-COMPARE-":
