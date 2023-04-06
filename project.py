@@ -208,12 +208,52 @@ class QueryPlan:
         self.isEq(node1.right if node1 is not None else None, node2.right if node2 is not None else None, leftTree,
                   rightTree)
 
+    def nestedCmp(self, other) -> Tuple[bool, Set[QueryPlanNode], Set[QueryPlanNode], int]:
+        leftTree, rightTree = set(), set()
+
+        def findNodeWhereEqual(toFind: QueryPlanNode, findIn: QueryPlanNode, leftTree: Set[QueryPlanNode],
+                               rightTree: Set[QueryPlanNode]) -> QueryPlanNode:
+            if findIn is None and toFind is None:
+                return None
+            if toFind == findIn:
+                return findIn
+            if toFind is not None:
+                leftTree.add(toFind)
+            if findIn is not None:
+                rightTree.add(findIn)
+            if findIn.left is not None:
+                res = findNodeWhereEqual(toFind, findIn.left)
+                if res is not None:
+                    return res
+            if findIn.right is not None:
+                res = findNodeWhereEqual(toFind, findIn.right)
+                if res is not None:
+                    return res
+            return None
+
+        found = findNodeWhereEqual(self.root, other.root)
+        if found is None:
+            return False, None, None
+
+        self.isEq(self.root, found, leftTree, rightTree)
+        return True, leftTree, rightTree
+
     def IsEqual(self, other) -> Tuple[bool, Set[QueryPlanNode], Set[QueryPlanNode]]:
         if not isinstance(other, QueryPlan):
             return False, {self.root}, {other.root}
 
+        leftNested, leftNestedLeftTreeDiff, leftNestedRightTreeDiff = self.nestedCmp(other)
+        rightNested, rightNestedLeftTreeDiff, rightNestedRightTreeDiff = other.nestedCmp(self)
+
         leftTree, rightTree = set(), set()
         self.isEq(self.root, other.root, leftTree, rightTree)
+
+        if leftNested and len(leftNestedLeftTreeDiff) + len(leftNestedRightTreeDiff) < len(leftTree) + len(rightTree):
+            leftTree, rightTree = leftNestedLeftTreeDiff, leftNestedRightTreeDiff
+
+        if rightNested and len(rightNestedLeftTreeDiff) + len(rightNestedRightTreeDiff) < len(leftTree) + len(
+                rightTree):
+            leftTree, rightTree = rightNestedLeftTreeDiff, rightNestedRightTreeDiff
 
         return len(leftTree) + len(rightTree) == 0, leftTree, rightTree
 
