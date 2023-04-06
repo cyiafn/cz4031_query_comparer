@@ -45,10 +45,10 @@ class QueryPlanNode:
 
 class QueryPlanSortNode(QueryPlanNode):
     def __init__(
-        self,
-        node: Dict[str, Any],
-        left: QueryPlanNode = None,
-        right: QueryPlanNode = None,
+            self,
+            node: Dict[str, Any],
+            left: QueryPlanNode = None,
+            right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.SortKeys: List[str] = node["Sort Key"]
@@ -71,10 +71,10 @@ class QueryPlanSortNode(QueryPlanNode):
 
 class QueryPlanGroupNode(QueryPlanNode):
     def __init__(
-        self,
-        node: Dict[str, Any],
-        left: QueryPlanNode = None,
-        right: QueryPlanNode = None,
+            self,
+            node: Dict[str, Any],
+            left: QueryPlanNode = None,
+            right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.GroupKeys: List[str] = node["Group Key"]
@@ -97,10 +97,10 @@ class QueryPlanGroupNode(QueryPlanNode):
 
 class QueryPlanJoinNode(QueryPlanNode):
     def __init__(
-        self,
-        node: Dict[str, Any],
-        left: QueryPlanNode = None,
-        right: QueryPlanNode = None,
+            self,
+            node: Dict[str, Any],
+            left: QueryPlanNode = None,
+            right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.JoinType: str = node["Join Type"]
@@ -128,18 +128,18 @@ class QueryPlanJoinNode(QueryPlanNode):
         if not isinstance(other, QueryPlanJoinNode):
             return False
         return (
-            super().__eq__(other)
-            and self.JoinType == other.JoinType
-            and self.JoinCond == other.JoinCond
+                super().__eq__(other)
+                and self.JoinType == other.JoinType
+                and self.JoinCond == other.JoinCond
         )
 
 
 class QueryPlanScanNode(QueryPlanNode):
     def __init__(
-        self,
-        node: Dict[str, Any],
-        left: QueryPlanNode = None,
-        right: QueryPlanNode = None,
+            self,
+            node: Dict[str, Any],
+            left: QueryPlanNode = None,
+            right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.RelationName: str = node["Relation Name"]
@@ -168,11 +168,11 @@ class QueryPlanScanNode(QueryPlanNode):
         if not isinstance(other, QueryPlanScanNode):
             return False
         return (
-            super().__eq__(other)
-            and self.RelationName == other.RelationName
-            and self.IndexName == other.IndexName
-            and self.IndexCond == other.IndexCond
-            and self.Filter == other.Filter
+                super().__eq__(other)
+                and self.RelationName == other.RelationName
+                and self.IndexName == other.IndexName
+                and self.IndexCond == other.IndexCond
+                and self.Filter == other.Filter
         )
 
 
@@ -204,11 +204,11 @@ class QueryPlan:
         print(self.root)
 
     def isEq(
-        self,
-        node1: QueryPlanNode,
-        node2: QueryPlanNode,
-        leftTree: Set[QueryPlanNode],
-        rightTree: Set[QueryPlanNode],
+            self,
+            node1: QueryPlanNode,
+            node2: QueryPlanNode,
+            leftTree: Set[QueryPlanNode],
+            rightTree: Set[QueryPlanNode],
     ) -> None:
         if node1 is None and node2 is None:
             return
@@ -243,14 +243,20 @@ class QueryPlan:
 
 # DB
 def query(sqlQuery: str) -> Dict[str, Any]:
-    conn = psycopg2.connect(**getDBConfig())
-    cursor = conn.cursor()
-    cursor.execute(f"EXPLAIN (FORMAT JSON) {sqlQuery}")
-    queryPlan = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-    return queryPlan[0][0][0]
+    try:
+        conn = psycopg2.connect(**getDBConfig())
+        cursor = conn.cursor()
+        cursor.execute(f"EXPLAIN (FORMAT JSON) {sqlQuery}")
+        queryPlan = cursor.fetchall()
+        return queryPlan[0][0][0]
+    except psycopg2.Error as e:
+        if e.pgcode and e.pgcode.startswith("42"):
+            raise Exception(f"Invalid SQL query: {e}")
+        else:
+            raise Exception(f"Error while querying the database: {e}")
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
