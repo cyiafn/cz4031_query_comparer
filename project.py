@@ -222,11 +222,11 @@ class QueryPlan:
             if findIn is not None:
                 rightTree.add(findIn)
             if findIn.left is not None:
-                res = findNodeWhereEqual(toFind, findIn.left)
+                res = findNodeWhereEqual(toFind, findIn.left, leftTree, rightTree)
                 if res is not None:
                     return res
             if findIn.right is not None:
-                res = findNodeWhereEqual(toFind, findIn.right)
+                res = findNodeWhereEqual(toFind, findIn.right, leftTree, rightTree)
                 if res is not None:
                     return res
             return None
