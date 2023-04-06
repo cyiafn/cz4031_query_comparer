@@ -1,0 +1,5 @@
+anytree==2.8.0
+psycopg2-binary==2.9.5
+PySimpleGUI==4.60.4
+six==1.16.0
+sqlparse==0.4.3
