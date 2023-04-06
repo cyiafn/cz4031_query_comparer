@@ -11,6 +11,8 @@ diffInQueryPlan = {
 }
 queries_subset = []
 
+filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
+
 
 def explain(diffInQuery, diffInPlan):
     # Remove Empty List
@@ -22,7 +24,6 @@ def explain(diffInQuery, diffInPlan):
     gettingAdd(diffInQuery)
 
     explaination = ""
-    filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
     print("diffInQueryPlan:", diffInQueryPlan)
     print("queries_subset:", queries_subset)
@@ -56,27 +57,17 @@ def explain(diffInQuery, diffInPlan):
 
                 if match_to and match_from:
                     explaination += f'"{match_from.group(1)}" to "{match_to.group(1)}" '
-                    # print("match_to.group(1):", match_to.group(1))
-                    # plan = plans.get(match_to.group(1).lower())
-                    # print("plan:", plan)
-                    # if plan != None:
-                    #     explaination += plan
                 count1 += 2
             else:
                 if count1 == 0:
                     explaination += "join condition such as "
-                if count1 % 2 == 1:
+                elif count1 % 2 == 1:
                     explaination += "and "
                     count1 = 0
 
                 match = re.search(filter_exp, " ".join(value.split()))
                 if match:
                     explaination += f'"{match.group(1)}" '
-                    # print("match.group(1):", match.group(1))
-                    # plan = plans.get(match.group(1).lower())
-                    # print("plan:", plan)
-                    # if plan != None:
-                    #     explaination += plan
                 count1 += 1
         count = 1
         if status == "Added":
@@ -138,6 +129,12 @@ def get_table_name(text):
         return None
 
 
+def format_string(text):
+    # replace double colon followed by word with empty string
+    text = text.replace("(", "").replace(")", "").replace("~~", "LIKE")
+    return re.sub(r"::\w+", "", text)
+
+
 def print_nodes(nodes):
     for node in nodes:
         Query.append(node.node)
@@ -147,8 +144,11 @@ def print_nodes(nodes):
             diffInQueryPlan["diffInJoinNode"].append(node.node)
         if type(node) == QueryPlanScanNode:
             if node.Filter != "":
+                filter = format_string(node.Filter)
+                if node.Alias != node.RelationName:
+                    filter = f"{node.Alias}.{filter}"
                 diffInQueryPlan["diffInScanNode"].append(
-                    node.Filter + "- " + node.node + " on: " + node.RelationName
+                    filter + "- " + node.node + " on: " + node.RelationName
                 )
         if type(node) == QueryPlanSortNode:
             diffInQueryPlan["diffInSortNode"].append(node.node)
@@ -165,9 +165,12 @@ def gettingAdd(diffInQuery):
         if diffInQuery.get("Added"):
             for q in diffInQuery["Added"]:
                 print("s:", s)
-                print("q:", q)
-                if q in s.replace("(", "").replace(")", "").replace("'", ""):
-                    matching_indices.append(i)
+                match = re.search(filter_exp, " ".join(q.split()))
+                if match:
+                    q = format_string(match.group(1))
+                    print("q:", q)
+                    if q.lower() in s.lower():
+                        matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
     queries_subset = [s.split("-")[1].strip() for s in queries_subset]
