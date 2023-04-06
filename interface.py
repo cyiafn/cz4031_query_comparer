@@ -103,7 +103,7 @@ def build_tree_diff(root: QueryPlanNode, parent=None) -> Node:
     return current_node
 
 
-def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
+def build_tree(root: QueryPlanNode, parent=None, diff=None, diff2=None) -> Node:
     current_node = None
     if not diff:
         current_node = Node(root.node, parent=parent)
@@ -112,18 +112,31 @@ def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
         if root.right:
             build_tree(root.right, parent=current_node)
     else:
-        if diff.node != root.node:
+        if root in diff or root in diff2:
             current_node = Node(root.node, parent=parent, color="red")
             if root.left:
-                build_tree_diff(root.left, parent=current_node)
+                build_tree(root.left, parent=current_node, diff=diff, diff2=diff2)
             if root.right:
-                build_tree_diff(root.right, parent=current_node)
+                build_tree(root.right, parent=current_node, diff=diff, diff2=diff2)
         else:
             current_node = Node(root.node, parent=parent)
             if root.left:
-                build_tree(root.left, parent=current_node, diff=diff)
+                build_tree(root.left, parent=current_node, diff=diff, diff2=diff2)
             if root.right:
-                build_tree(root.right, parent=current_node, diff=diff)
+                build_tree(root.right, parent=current_node, diff=diff, diff2=diff2)
+
+        # if diff.node != root.node:
+        #     current_node = Node(root.node, parent=parent, color="red")
+        #     if root.left:
+        #         build_tree_diff(root.left, parent=current_node)
+        #     if root.right:
+        #         build_tree_diff(root.right, parent=current_node)
+        # else:
+        #     current_node = Node(root.node, parent=parent)
+        #     if root.left:
+        #         build_tree(root.left, parent=current_node, diff=diff)
+        #     if root.right:
+        #         build_tree(root.right, parent=current_node, diff=diff)
 
     return current_node
 
@@ -196,8 +209,8 @@ def compare_btn(window: sg.Window, event, values):
 
         if not equal:
             tree_1 = build_tree(q_plan_1_nodes.root)
-            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[1])
-            explaination = explain(diff_query, output)
+            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[1], diff2=output[2])
+            # explaination = explain(diff_query, output)
         else:
             tree_1 = build_tree(q_plan_1_nodes.root)
             tree_2 = build_tree(q_plan_2_nodes.root)
