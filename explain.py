@@ -36,6 +36,8 @@ queries_subset = []
 def explain():
     queryplann(output)
     gettingAdd()
+    table = joiningsplit()
+    print(table)
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
@@ -87,7 +89,7 @@ def explain():
             for i in (queries_subset):
                 explaination += i
                 if size1 == 1:
-                    explaination += ". "
+                    explaination += ". \n"
                 else:
                     explaination += " and "
                     size1 -= 1
@@ -109,21 +111,15 @@ def explain():
         elif i == "Memoize":
             explaination += "The query plan uses Memoize to improve the performance of recursive queries. "
         else:
-            explaination += "NEVER SEEN"
+            explaination += "The query plan uses " + i + ". "
     for i in set(diffInQueryPlan["diffInGroupNode"]):
-        if i == "Aggregate":
-            explaination += "Grouping techniqes such as aggregation are used. "
-        else:
-            explaination += "NEVER SEEN"
+            explaination += "\nGrouping techniqes such as " + i + "are used. "
     if size > 0:
-        explaination += "Such joined operaion have been used: "
-    for i in set(diffInQueryPlan["diffInJoinNode"]):
-        explaination += i
-        if size == 1:
-            explaination += ". "
-        else:
-            explaination += " and "
-            size -= 1
+        explaination += "\nSuch joined operation have been used: "
+    for i in diffInQueryPlan["diffInJoinNode"]:
+        for x in range(0,len(table),2):
+            if x == 0:
+                explaination += "\nTable " + table[x] + " and table " + table[x+1] + " is joined using " + i.split("-")[0] + "with join condition" + i.split("-")[1] + ". "
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
     explaination = explaination.replace("(", "").replace(")", "").replace("'", "").replace("::numeric", "").replace("~~", "LIKE").replace("::text", "")
@@ -146,7 +142,7 @@ def queryplann(output):
     
 def print_nodes(node):
     Query.append(node.node)
-    if type(node) == QueryPlanJoinNode:
+    if type(node) == QueryPlanJoinNode and node.JoinCond != "":
             #print(node.JoinCond)
         diffInQueryPlan["diffInJoinNode"].append(node.node + " - " + node.JoinCond)
     if type(node) == QueryPlanScanNode:
@@ -162,6 +158,23 @@ def print_nodes(node):
         print_nodes(node.left)
     if node.right:
         print_nodes(node.right)
+
+def get_table_name(text):
+    # match the last word before the dot
+    match = re.search(r"\b(\w+)\.", text)
+    if match:
+        return match.group(1)
+    else:
+        return None
+    
+def joiningsplit() -> list:
+    table = []
+    for i in diffInQueryPlan["diffInJoinNode"]:
+        temp = i.split("-")[1]
+        table.append(get_table_name(temp.split("=")[0].strip()))
+        table.append(get_table_name(temp.split("=")[1].strip()))
+
+    return(table)
 
 def gettingAdd():
     global queries_subset
