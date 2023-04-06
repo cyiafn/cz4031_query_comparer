@@ -18,10 +18,8 @@ def explain(diffInQuery, diffInPlan):
     print("diffInQuery:", diffInQuery)
     print("diffInPlan:", diffInPlan)
 
-    queryplann(diffInPlan)
+    print_nodes(diffInPlan)
     gettingAdd(diffInQuery)
-    plans = plan_to_english(diffInPlan[2])
-    print("plans:", plans)
 
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
@@ -131,17 +129,6 @@ def explain(diffInQuery, diffInPlan):
     return explaination
 
 
-def queryplann(output):
-    if output[2] == None:
-        print("No changes to query plan")
-    else:
-        Query.append("Changes: ")
-        print_nodes(output[2])
-
-    for i in diffInQueryPlan:
-        print(diffInQueryPlan[i])
-
-
 def get_table_name(text):
     # match the last word before the dot
     match = re.search(r"\b(\w+)\.", text)
@@ -151,66 +138,24 @@ def get_table_name(text):
         return None
 
 
-def plan_to_english(node):
-    explaination = {}
-    if type(node) == QueryPlanJoinNode:
-        if node.JoinCond != "":
-            table1 = get_table_name(node.JoinCond.split("=")[0].strip())
-            table2 = get_table_name(node.JoinCond.split("=")[1].strip())
-            JoinCond = (
-                node.JoinCond.replace("(", "")
-                .replace(")", "")
-                .replace(f"{table1}.", "")
-                .replace(f"{table2}.", "")
-            )
-            explaination[
-                JoinCond
-            ] = f"{node.node} is done on table {table1} and {table2} with join condition {JoinCond}"
-    if type(node) == QueryPlanScanNode:
-        if node.Filter != "":
-            filter = (
-                node.Filter.replace("(", "")
-                .replace(")", "")
-                .replace("~~", "LIKE")
-                .replace("::text", "")
-            )
-            if node.Alias != node.RelationName:
-                filter = f"{node.Alias}.{filter}"
-            explaination[
-                filter.lower()
-            ] = f"{node.node.lower()} is done on table {node.RelationName}"
-    # if type(node) == QueryPlanSortNode:
-    # if type(node) == QueryPlanGroupNode:
-    # if type(node) == QueryPlanNode:
-    if node.left:
-        explaination.update(plan_to_english(node.left))
-    if node.right:
-        explaination.update(plan_to_english(node.right))
-
-    return explaination
-
-
-def print_nodes(node):
-    Query.append(node.node)
-    if type(node) == QueryPlanJoinNode:
-        print("Join Condition:", node.JoinCond)
-        print("Join Type:", node.JoinType)
-        diffInQueryPlan["diffInJoinNode"].append(node.node)
-    if type(node) == QueryPlanScanNode:
-        if node.Filter != "":
-            diffInQueryPlan["diffInScanNode"].append(
-                node.Filter + "- " + node.node + " on: " + node.RelationName
-            )
-    if type(node) == QueryPlanSortNode:
-        diffInQueryPlan["diffInSortNode"].append(node.node)
-    if type(node) == QueryPlanGroupNode:
-        diffInQueryPlan["diffInGroupNode"].append(node.node)
-    if type(node) == QueryPlanNode:
-        diffInQueryPlan["diffInPlan"].append(node.node)
-    if node.left:
-        print_nodes(node.left)
-    if node.right:
-        print_nodes(node.right)
+def print_nodes(nodes):
+    for node in nodes:
+        Query.append(node.node)
+        if type(node) == QueryPlanJoinNode:
+            print("Join Condition:", node.JoinCond)
+            print("Join Type:", node.JoinType)
+            diffInQueryPlan["diffInJoinNode"].append(node.node)
+        if type(node) == QueryPlanScanNode:
+            if node.Filter != "":
+                diffInQueryPlan["diffInScanNode"].append(
+                    node.Filter + "- " + node.node + " on: " + node.RelationName
+                )
+        if type(node) == QueryPlanSortNode:
+            diffInQueryPlan["diffInSortNode"].append(node.node)
+        if type(node) == QueryPlanGroupNode:
+            diffInQueryPlan["diffInGroupNode"].append(node.node)
+        if type(node) == QueryPlanNode:
+            diffInQueryPlan["diffInPlan"].append(node.node)
 
 
 def gettingAdd(diffInQuery):
