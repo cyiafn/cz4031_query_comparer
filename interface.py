@@ -1,10 +1,12 @@
+import os
+
 import PySimpleGUI as sg
+import sqlparse
+from PIL import Image
 from anytree import Node
 from anytree.exporter import UniqueDotExporter
-import sqlparse
-from explain import explain
+
 from project import QueryPlan, QueryPlanNode, getDiff, query
-import os
 
 os.environ["PATH"] += os.pathsep + "Graphviz/bin"  # Set Graphviz PATH
 
@@ -53,7 +55,6 @@ queryplan_column = [
         ),
     ],
 ]
-
 
 explaination_column = [
     [sg.Text("Explaination", font=("Helvitica", "16", "bold"))],
@@ -172,6 +173,12 @@ def format_query(query: str) -> str:
     return sqlparse.format(query, keyword_case="upper", strip_comments=True)
 
 
+def load_image(file, max_size):
+    img = Image.open(file)
+    img.thumbnail(max_size)
+    return img
+
+
 def compare_btn(window: sg.Window, event, values):
     error_msg = ""
 
@@ -221,9 +228,11 @@ def compare_btn(window: sg.Window, event, values):
         filename_2 = "tree_2.png"
 
         UniqueDotExporter(tree_1).to_picture(filename_1)
+        load_image(filename_1, (400, 300)).save(filename_1, format="PNG")
         window["-QUERYPLAN1IMAGE-"].update(filename_1)
 
         UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
+        load_image(filename_2, (400, 300)).save(filename_2, format="PNG")
         window["-QUERYPLAN2IMAGE-"].update(filename_2)
 
         # Refresh the update
@@ -248,7 +257,7 @@ def start_ui() -> None:
         event, values = window.read()
 
         if (
-            event == sg.WIN_CLOSED or event == "-QUIT-"
+                event == sg.WIN_CLOSED or event == "-QUIT-"
         ):  # if user closes window or clicks cancel
             break
         elif event == "-COMPARE-":
