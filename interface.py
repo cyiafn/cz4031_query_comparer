@@ -103,7 +103,7 @@ def build_tree_diff(root: QueryPlanNode, parent=None) -> Node:
     return current_node
 
 
-def build_tree(root: QueryPlanNode, parent=None, diff=None, diff2=None) -> Node:
+def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
     current_node = None
     if not diff:
         current_node = Node(root.node, parent=parent)
@@ -112,18 +112,18 @@ def build_tree(root: QueryPlanNode, parent=None, diff=None, diff2=None) -> Node:
         if root.right:
             build_tree(root.right, parent=current_node)
     else:
-        if root in diff or root in diff2:
+        if root in diff:
             current_node = Node(root.node, parent=parent, color="red")
             if root.left:
-                build_tree(root.left, parent=current_node, diff=diff, diff2=diff2)
+                build_tree(root.left, parent=current_node, diff=diff)
             if root.right:
-                build_tree(root.right, parent=current_node, diff=diff, diff2=diff2)
+                build_tree(root.right, parent=current_node, diff=diff)
         else:
             current_node = Node(root.node, parent=parent)
             if root.left:
-                build_tree(root.left, parent=current_node, diff=diff, diff2=diff2)
+                build_tree(root.left, parent=current_node, diff=diff)
             if root.right:
-                build_tree(root.right, parent=current_node, diff=diff, diff2=diff2)
+                build_tree(root.right, parent=current_node, diff=diff)
 
         # if diff.node != root.node:
         #     current_node = Node(root.node, parent=parent, color="red")
@@ -209,7 +209,7 @@ def compare_btn(window: sg.Window, event, values):
 
         if not equal:
             tree_1 = build_tree(q_plan_1_nodes.root)
-            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[1], diff2=output[2])
+            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[2])
             # explaination = explain(diff_query, output)
         else:
             tree_1 = build_tree(q_plan_1_nodes.root)
