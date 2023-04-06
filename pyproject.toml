@@ -11,6 +11,7 @@ psycopg2-binary = "^2.9.5"
 sqlparse = "^0.4.3"
 anytree = "^2.8.0"
 pysimplegui = "^4.60.4"
+pillow = "^9.5.0"
 
 
 [build-system]

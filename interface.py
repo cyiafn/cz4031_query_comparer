@@ -1,10 +1,12 @@
+import os
+
 import PySimpleGUI as sg
+import sqlparse
+from PIL import Image
 from anytree import Node
 from anytree.exporter import UniqueDotExporter
-import sqlparse
-from explain import explain
+
 from project import QueryPlan, QueryPlanNode, getDiff, query
-import os
 
 os.environ["PATH"] += os.pathsep + "Graphviz/bin"  # Set Graphviz PATH
 
@@ -27,14 +29,18 @@ query_column = [
     ],
 ]
 
-queryplan1_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN1IMAGE-")]]
-queryplan2_image = [[sg.Image(size=(400, 300), key="-QUERYPLAN2IMAGE-")]]
+queryplan1_image = [[sg.Image(size=(400, 600), key="-QUERYPLAN1IMAGE-")]]
+queryplan2_image = [[sg.Image(size=(400, 600), key="-QUERYPLAN2IMAGE-")]]
 queryplanimage_column = [
     [sg.Text("Query Plan Visualization", font=("Helvitica", "16", "bold"))],
     [
         sg.Column(queryplan1_image, scrollable=True, key="-QUERYPLAN1IMAGECOLUMN-"),
         sg.Button("View", key="-VIEW1-"),
     ],
+]
+
+queryplanimage2_column = [
+    [sg.Text("", font=("Helvitica", "16", "bold"))],
     [
         sg.Column(queryplan2_image, scrollable=True, key="-QUERYPLAN2IMAGECOLUMN-"),
         sg.Button("View", key="-VIEW2-"),
@@ -55,8 +61,9 @@ queryplan_column = [
 ]
 
 
-explanation_column = [
-    [sg.Text("Explanation", font=("Helvitica", "16", "bold"))],
+explaination_column = [
+    [sg.Text("Explaination", font=("Helvitica", "16", "bold"))],
+
     [
         sg.Multiline(
             size=(1620, 10),
@@ -82,6 +89,7 @@ layout = [
         # sg.Column(queryplan_column),
         sg.VSeperator(),
         sg.Column(queryplanimage_column),
+        sg.Column(queryplanimage2_column),
     ],
     [
         sg.Column(
@@ -149,6 +157,12 @@ def format_query(query: str) -> str:
     return sqlparse.format(query, keyword_case="upper", strip_comments=True)
 
 
+def load_image(file, max_size):
+    img = Image.open(file)
+    img.thumbnail(max_size)
+    return img
+
+
 def compare_btn(window: sg.Window, event, values):
     error_msg = ""
 
@@ -197,11 +211,16 @@ def compare_btn(window: sg.Window, event, values):
         filename_1 = "tree_1.png"
         filename_2 = "tree_2.png"
 
+        filename_1_1 = "tree_1_1.png"
+        filename_2_2 = "tree_2_2.png"
+
         UniqueDotExporter(tree_1).to_picture(filename_1)
-        window["-QUERYPLAN1IMAGE-"].update(filename_1)
+        load_image(filename_1, (400, 300)).save(filename_1_1, format="PNG")
+        window["-QUERYPLAN1IMAGE-"].update(filename_1_1)
 
         UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
-        window["-QUERYPLAN2IMAGE-"].update(filename_2)
+        load_image(filename_2, (400, 300)).save(filename_2_2, format="PNG")
+        window["-QUERYPLAN2IMAGE-"].update(filename_2_2)
 
         # Refresh the update
         window.refresh()
