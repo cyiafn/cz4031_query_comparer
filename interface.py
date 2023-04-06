@@ -60,12 +60,14 @@ queryplan_column = [
     ],
 ]
 
+
 explaination_column = [
     [sg.Text("Explaination", font=("Helvitica", "16", "bold"))],
+
     [
         sg.Multiline(
             size=(1620, 10),
-            key="-EXPLAINATION-",
+            key="-EXPLANTION-",
             disabled=True,
             background_color="white",
         )
@@ -91,22 +93,12 @@ layout = [
     ],
     [
         sg.Column(
-            explaination_column, vertical_alignment="center", justification="center"
+            explanation_column, vertical_alignment="center", justification="center"
         )
     ],
     [sg.Column(error_column, vertical_alignment="center", justification="center")],
     [sg.Column(button_column, vertical_alignment="center", justification="center")],
 ]
-
-
-def build_tree_diff(root: QueryPlanNode, parent=None) -> Node:
-    current_node = Node(root.node, parent=parent, color="red")
-    if root.left:
-        build_tree_diff(root.left, parent=current_node)
-    if root.right:
-        build_tree_diff(root.right, parent=current_node)
-
-    return current_node
 
 
 def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
@@ -130,19 +122,6 @@ def build_tree(root: QueryPlanNode, parent=None, diff=None) -> Node:
                 build_tree(root.left, parent=current_node, diff=diff)
             if root.right:
                 build_tree(root.right, parent=current_node, diff=diff)
-
-        # if diff.node != root.node:
-        #     current_node = Node(root.node, parent=parent, color="red")
-        #     if root.left:
-        #         build_tree_diff(root.left, parent=current_node)
-        #     if root.right:
-        #         build_tree_diff(root.right, parent=current_node)
-        # else:
-        #     current_node = Node(root.node, parent=parent)
-        #     if root.left:
-        #         build_tree(root.left, parent=current_node, diff=diff)
-        #     if root.right:
-        #         build_tree(root.right, parent=current_node, diff=diff)
 
     return current_node
 
@@ -217,17 +196,17 @@ def compare_btn(window: sg.Window, event, values):
 
         diff_query = getDiff(query_1, query_2)
         highlight_text(window, diff_query, query_2)
-        explaination = ""
+        explanation = ""
 
         if not equal:
             tree_1 = build_tree(q_plan_1_nodes.root)
             tree_2 = build_tree(q_plan_2_nodes.root, diff=output[2])
-            # explaination = explain(diff_query, output)
+            explanation = explain(diff_query, output[2])
         else:
             tree_1 = build_tree(q_plan_1_nodes.root)
             tree_2 = build_tree(q_plan_2_nodes.root)
 
-        window["-EXPLAINATION-"].update(explaination)
+        window["-EXPLANTION-"].update(explanation)
         # Export tree to PNG file using UniqueDotExporter
         filename_1 = "tree_1.png"
         filename_2 = "tree_2.png"
