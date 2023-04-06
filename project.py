@@ -231,7 +231,7 @@ class QueryPlan:
                     return res
             return None
 
-        found = findNodeWhereEqual(self.root, other.root)
+        found = findNodeWhereEqual(self.root, other.root, leftTree, rightTree)
         if found is None:
             return False, None, None
 
