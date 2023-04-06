@@ -85,7 +85,7 @@ def explain(diffInQuery, diffInPlan):
             explaination += ", lesser to none filter are required for scans. "
         elif status == "Modified":
             explaination = explaination.rstrip()
-            explaination += ", extra filtering is not needed. "
+            explaination += ", no extra filtering is needed. "
     for i in set(diffInQueryPlan["diffInPlan"]):
         if i == "Gather Merge":
             explaination += "The query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
@@ -96,7 +96,7 @@ def explain(diffInQuery, diffInPlan):
         elif i == "Sort":
             explaination += "Sorting have been used. "
         elif i == "Materialize":
-            explaination += "The query plan uses Materialization to the process of creating an intermediate result set. This maybe due to the size of the result set being too large to fit into memory or when multiple operations are performed on the same data. "
+            explaination += "The query plan uses Materialization to the process of creating an intermediate result set. This may be due to the size of the result set being too large to fit into memory or when multiple operations are performed on the same data. "
         elif i == "Memoize":
             explaination += "The query plan uses Memoize to improve the performance of recursive queries. "
         else:
