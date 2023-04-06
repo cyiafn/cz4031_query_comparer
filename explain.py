@@ -20,6 +20,8 @@ def explain(diffInQuery, diffInPlan):
 
     queryplann(diffInPlan)
     gettingAdd(diffInQuery)
+    plans = plan_to_english(diffInPlan[2])
+    print("plans:", plans)
 
     explaination = ""
     filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
@@ -51,13 +53,16 @@ def explain(diffInQuery, diffInPlan):
                 if count1 % 2 == 0 and count1 != 0:
                     explaination += "and "
                     count1 = 0
-                match_to = re.search(filter_exp, " ".join(value[0].split()))
-                match_from = re.search(filter_exp, " ".join(value[1].split()))
+                match_from = re.search(filter_exp, " ".join(value[0].split()))
+                match_to = re.search(filter_exp, " ".join(value[1].split()))
 
                 if match_to and match_from:
-                    explaination += (
-                        f"\"{match_to.group(1)}' to '{match_from.group(1)}\" "
-                    )
+                    explaination += f'"{match_from.group(1)}" to "{match_to.group(1)}" '
+                    # print("match_to.group(1):", match_to.group(1))
+                    # plan = plans.get(match_to.group(1).lower())
+                    # print("plan:", plan)
+                    # if plan != None:
+                    #     explaination += plan
                 count1 += 2
             else:
                 if count1 == 0:
@@ -69,7 +74,11 @@ def explain(diffInQuery, diffInPlan):
                 match = re.search(filter_exp, " ".join(value.split()))
                 if match:
                     explaination += f'"{match.group(1)}" '
-
+                    # print("match.group(1):", match.group(1))
+                    # plan = plans.get(match.group(1).lower())
+                    # print("plan:", plan)
+                    # if plan != None:
+                    #     explaination += plan
                 count1 += 1
         count = 1
         if status == "Added":
@@ -133,10 +142,59 @@ def queryplann(output):
         print(diffInQueryPlan[i])
 
 
+def get_table_name(text):
+    # match the last word before the dot
+    match = re.search(r"\b(\w+)\.", text)
+    if match:
+        return match.group(1)
+    else:
+        return None
+
+
+def plan_to_english(node):
+    explaination = {}
+    if type(node) == QueryPlanJoinNode:
+        if node.JoinCond != "":
+            table1 = get_table_name(node.JoinCond.split("=")[0].strip())
+            table2 = get_table_name(node.JoinCond.split("=")[1].strip())
+            JoinCond = (
+                node.JoinCond.replace("(", "")
+                .replace(")", "")
+                .replace(f"{table1}.", "")
+                .replace(f"{table2}.", "")
+            )
+            explaination[
+                JoinCond
+            ] = f"{node.node} is done on table {table1} and {table2} with join condition {JoinCond}"
+    if type(node) == QueryPlanScanNode:
+        if node.Filter != "":
+            filter = (
+                node.Filter.replace("(", "")
+                .replace(")", "")
+                .replace("~~", "LIKE")
+                .replace("::text", "")
+            )
+            if node.Alias != node.RelationName:
+                filter = f"{node.Alias}.{filter}"
+            explaination[
+                filter.lower()
+            ] = f"{node.node.lower()} is done on table {node.RelationName}"
+    # if type(node) == QueryPlanSortNode:
+    # if type(node) == QueryPlanGroupNode:
+    # if type(node) == QueryPlanNode:
+    if node.left:
+        explaination.update(plan_to_english(node.left))
+    if node.right:
+        explaination.update(plan_to_english(node.right))
+
+    return explaination
+
+
 def print_nodes(node):
     Query.append(node.node)
     if type(node) == QueryPlanJoinNode:
-        # print(node.JoinCond)
+        print("Join Condition:", node.JoinCond)
+        print("Join Type:", node.JoinType)
         diffInQueryPlan["diffInJoinNode"].append(node.node)
     if type(node) == QueryPlanScanNode:
         if node.Filter != "":
@@ -159,11 +217,12 @@ def gettingAdd(diffInQuery):
     global queries_subset
     matching_indices = []
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
-        for q in diffInQuery["Added"]:
-            print("s:", s)
-            print("q:", q)
-            if q in s.replace("(", "").replace(")", "").replace("'", ""):
-                matching_indices.append(i)
+        if diffInQuery.get("Added"):
+            for q in diffInQuery["Added"]:
+                print("s:", s)
+                print("q:", q)
+                if q in s.replace("(", "").replace(")", "").replace("'", ""):
+                    matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
     queries_subset = [s.split("-")[1].strip() for s in queries_subset]

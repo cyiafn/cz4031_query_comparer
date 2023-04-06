@@ -125,6 +125,7 @@ class QueryPlanScanNode(QueryPlanNode):
     ):
         super().__init__(node, left, right)
         self.RelationName: str = node["Relation Name"]
+        self.Alias: str = node["Alias"]
         self.IndexName: str = node["Index Name"] if "Index Name" in node else ""
         self.IndexCond: str = node["Index Cond"] if "Index Cond" in node else ""
         self.Filter: str = node["Filter"] if "Filter" in node else ""
