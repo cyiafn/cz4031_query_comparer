@@ -63,7 +63,7 @@ queryplan_column = [
 
 
 explanation_column = [
-    [sg.Text("Explaination", font=("Helvitica", "16", "bold"))],
+    [sg.Text("Explanation", font=("Helvitica", "16", "bold"))],
     [
         sg.Multiline(
             size=(1620, 10),
