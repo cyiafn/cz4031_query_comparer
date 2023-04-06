@@ -227,13 +227,16 @@ def compare_btn(window: sg.Window, event, values):
         filename_1 = "tree_1.png"
         filename_2 = "tree_2.png"
 
+        filename_1_1 = "tree_1_1.png"
+        filename_2_2 = "tree_2_2.png"
+
         UniqueDotExporter(tree_1).to_picture(filename_1)
-        load_image(filename_1, (400, 300)).save(filename_1, format="PNG")
-        window["-QUERYPLAN1IMAGE-"].update(filename_1)
+        load_image(filename_1, (400, 300)).save(filename_1_1, format="PNG")
+        window["-QUERYPLAN1IMAGE-"].update(filename_1_1)
 
         UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
-        load_image(filename_2, (400, 300)).save(filename_2, format="PNG")
-        window["-QUERYPLAN2IMAGE-"].update(filename_2)
+        load_image(filename_2, (400, 300)).save(filename_2_2, format="PNG")
+        window["-QUERYPLAN2IMAGE-"].update(filename_2_2)
 
         # Refresh the update
         window.refresh()
@@ -263,6 +266,7 @@ def start_ui() -> None:
         elif event == "-COMPARE-":
             compare_btn(window, event, values)
         elif event == "-VIEW1-":
+            load_image(filename_2, (400, 300)).save(filename_2, format="PNG")
             sg.popup(
                 keep_on_top=True,
                 image="tree_1.png",
