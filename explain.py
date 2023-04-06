@@ -5,7 +5,7 @@ diffInQuery = {
     'Removed': ["s_suppkey = l_suppkey", "AND ps_suppkey = l_suppkey", "AND ps_partkey = l_partkey" ],
     'Modified': [[" AND s_acctbal > 10", " AND s_acctbal > 15"]],
     'Added': ["AND s_acctbal < 500"]
-    #'Added': ["AND c.c_name LIKE '%cheng'"]
+    # 'Added': ["AND c.c_name LIKE '%cheng'"]
 }
 # query_1 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey"
 # query_2 = "SELECT * FROM customer C, orders O WHERE C.c_custkey = O.o_custkey AND c.c_name LIKE '%cheng'"
@@ -71,8 +71,8 @@ def explain():
                 count1 += 2
             else:
                 if count1 == 0:
-                    explaination += "join condition such as "
-                if count1 % 2 == 1:
+                    explaination += "join condition such as "  
+                elif count1 % 2 == 0:
                     explaination += "and "
                     count1 = 0
 
@@ -94,7 +94,7 @@ def explain():
         elif status == "Removed":
             explaination += ",lesser to none filter are required for scans. "
         elif status == "Modified":
-            explaination += ",extra filtering is not needed. "
+            explaination += ",no extra filtering is needed. "
     for i in set(diffInQueryPlan["diffInPlan"]):
         if i == "Gather Merge":
             explaination += "The query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
@@ -135,18 +135,23 @@ def queryplann(output):
     else:
         Query.append("Changes: ")
         print_nodes(output[2])
-
+    print("Different in Plan: ")
     for i in diffInQueryPlan:
+        
         print(diffInQueryPlan[i])
+    print("Different in Query: ")
+    for i in diffInQuery:
+        
+        print(diffInQuery[i])
     
 def print_nodes(node):
     Query.append(node.node)
     if type(node) == QueryPlanJoinNode:
             #print(node.JoinCond)
-        diffInQueryPlan["diffInJoinNode"].append(node.node)
+        diffInQueryPlan["diffInJoinNode"].append(node.node + " - " + node.JoinCond)
     if type(node) == QueryPlanScanNode:
         if node.Filter != "":
-            diffInQueryPlan["diffInScanNode"].append(node.Filter + "- " + node.node +" on: " + node.RelationName)
+            diffInQueryPlan["diffInScanNode"].append(node.Filter + " - " + node.node +" on: " + node.RelationName)
     if type(node) == QueryPlanSortNode:
         diffInQueryPlan["diffInSortNode"].append(node.node)
     if type(node) == QueryPlanGroupNode:
@@ -162,11 +167,18 @@ def gettingAdd():
     global queries_subset
     matching_indices = []
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
+        # print(s.replace("(", "").replace(")", "").replace("'", "").replace("~~", "LIKE").replace("::text", ""))
         for q in diffInQuery["Added"]:
-            if q in s.replace("(", "").replace(")", "").replace("'", ""):
-                matching_indices.append(i)
+            # print(q.split(".")[1].replace("'", ""))
+            try:
+                if q.split(".")[1].replace("'", "") in s.replace("(", "").replace(")", "").replace("'", "").replace("~~", "LIKE").replace("::text", ""):
+                    matching_indices.append(i)
+            except:
+                if q.replace("'", "") in s.replace("(", "").replace(")", "").replace("'", "").replace("~~", "LIKE").replace("::text", ""):
+                    matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
     queries_subset = [s.split('-')[1].strip() for s in queries_subset]
+    print(queries_subset)
 
 explain()
