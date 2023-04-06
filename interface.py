@@ -5,6 +5,7 @@ import sqlparse
 from PIL import Image
 from anytree import Node
 from anytree.exporter import UniqueDotExporter
+from explain import explain
 
 from project import QueryPlan, QueryPlanNode, getDiff, query
 
@@ -61,9 +62,8 @@ queryplan_column = [
 ]
 
 
-explaination_column = [
+explanation_column = [
     [sg.Text("Explaination", font=("Helvitica", "16", "bold"))],
-
     [
         sg.Multiline(
             size=(1620, 10),
@@ -185,48 +185,53 @@ def compare_btn(window: sg.Window, event, values):
         window["-QUERY1-"].update(query_1)
         window["-QUERY2-"].update(query_2)
 
-        q_plan_1 = query(query_1)
-        q_plan_2 = query(query_2)
+        try:
+            q_plan_1 = query(query_1)
+            q_plan_2 = query(query_2)
 
-        q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
-        q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
+            q_plan_1_nodes = QueryPlan(q_plan_1["Plan"])
+            q_plan_2_nodes = QueryPlan(q_plan_2["Plan"])
 
-        output = q_plan_1_nodes.IsEqual(q_plan_2_nodes)
-        equal = output[0]
+            output = q_plan_1_nodes.IsEqual(q_plan_2_nodes)
+            equal = output[0]
 
-        diff_query = getDiff(query_1, query_2)
-        highlight_text(window, diff_query, query_2)
-        explanation = ""
+            diff_query = getDiff(query_1, query_2)
+            highlight_text(window, diff_query, query_2)
+            explanation = ""
 
-        if not equal:
-            tree_1 = build_tree(q_plan_1_nodes.root)
-            tree_2 = build_tree(q_plan_2_nodes.root, diff=output[2])
-            explanation = explain(diff_query, output[2])
-        else:
-            tree_1 = build_tree(q_plan_1_nodes.root)
-            tree_2 = build_tree(q_plan_2_nodes.root)
+            if not equal:
+                tree_1 = build_tree(q_plan_1_nodes.root)
+                tree_2 = build_tree(q_plan_2_nodes.root, diff=output[2])
+                explanation = explain(diff_query, output[2])
+            else:
+                tree_1 = build_tree(q_plan_1_nodes.root)
+                tree_2 = build_tree(q_plan_2_nodes.root)
 
-        window["-EXPLANTION-"].update(explanation)
-        # Export tree to PNG file using UniqueDotExporter
-        filename_1 = "tree_1.png"
-        filename_2 = "tree_2.png"
+            window["-EXPLANTION-"].update(explanation)
+            # Export tree to PNG file using UniqueDotExporter
+            filename_1 = "tree_1.png"
+            filename_2 = "tree_2.png"
 
-        filename_1_1 = "tree_1_1.png"
-        filename_2_2 = "tree_2_2.png"
+            filename_1_1 = "tree_1_1.png"
+            filename_2_2 = "tree_2_2.png"
 
-        UniqueDotExporter(tree_1).to_picture(filename_1)
-        load_image(filename_1, (400, 300)).save(filename_1_1, format="PNG")
-        window["-QUERYPLAN1IMAGE-"].update(filename_1_1)
+            UniqueDotExporter(tree_1).to_picture(filename_1)
+            load_image(filename_1, (400, 300)).save(filename_1_1, format="PNG")
+            window["-QUERYPLAN1IMAGE-"].update(filename_1_1)
 
-        UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(filename_2)
-        load_image(filename_2, (400, 300)).save(filename_2_2, format="PNG")
-        window["-QUERYPLAN2IMAGE-"].update(filename_2_2)
+            UniqueDotExporter(tree_2, nodeattrfunc=set_name_color).to_picture(
+                filename_2
+            )
+            load_image(filename_2, (400, 300)).save(filename_2_2, format="PNG")
+            window["-QUERYPLAN2IMAGE-"].update(filename_2_2)
 
-        # Refresh the update
-        window.refresh()
-        # Update for scroll area of Column element
-        window["-QUERYPLAN1IMAGECOLUMN-"].contents_changed()
-        window["-QUERYPLAN2IMAGECOLUMN-"].contents_changed()
+            # Refresh the update
+            window.refresh()
+            # Update for scroll area of Column element
+            window["-QUERYPLAN1IMAGECOLUMN-"].contents_changed()
+            window["-QUERYPLAN2IMAGECOLUMN-"].contents_changed()
+        except Exception as err:
+            window["-ERROR-"].update(err)
 
 
 def start_ui() -> None:
