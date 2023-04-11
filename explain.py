@@ -10,7 +10,6 @@ diffInQueryPlan = {
     "diffInPlan": [],
 }
 queries_subset = []
-
 filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 
 
@@ -36,6 +35,7 @@ def explain(diffInQuery, diffInPlan):
         print(diffInQueryPlan[i])
 
     count = 0
+    toskip = 0
     size = len(set(diffInQueryPlan["diffInJoinNode"]))
     size1 = len(set(diffInQueryPlan["diffInScanNode"]))
     for status, values in diffInQuery.items():
@@ -54,32 +54,41 @@ def explain(diffInQuery, diffInPlan):
         count1 = 0
         for value in values:
             if status == "Modified":
-                if count1 == 0:
-                    explaination += "join condition that changes from "
-                if count1 % 2 == 0 and count1 != 0:
-                    explaination += "and "
-                    count1 = 0
                 match_from = re.search(filter_exp, " ".join(value[0].split()))
                 match_to = re.search(filter_exp, " ".join(value[1].split()))
 
                 if match_to and match_from:
+                    if count1 == 0 or toskip == 1:
+                        explaination += "join condition that changes from "
+                        toskip = 0
+                    if count1 % 2 == 0 and count1 != 0:
+                        explaination += "and "
+                        count1 = 0
                     explaination += f'"{match_from.group(1)}" to "{match_to.group(1)}" '
-                count1 += 2
+                    count1 += 2
+                else:
+                    if count1 == 2:
+                        explaination += "and "
+                    explaination += "condition outside of the where clause, "
+                    toskip = 1
             else:
-                if count1 == 0:
-                    explaination += "join condition such as "
-                elif count1 % 2 == 1:
-                    explaination += "and "
-                    count1 = 0
-
                 match = re.search(filter_exp, " ".join(value.split()))
                 if match:
+                    if count1 == 0:
+                        explaination += "join condition such as "
+                    elif count1 % 2 == 1:
+                        explaination += "and "
+                        count1 = 0
                     explaination += f'"{match.group(1)}" '
-                count1 += 1
+                    count1 += 1
+                else:
+                    explaination += "some condition outside of the where clause, "
+                    toskip = 1
         count = 1
         if status == "Added":
             explaination = explaination.rstrip()
-            explaination += ", extra filter are needed during "
+            if toskip == 0:
+                explaination += ", extra filter are needed during "
             for i in queries_subset:
                 explaination += i
                 if size1 == 1:
@@ -89,10 +98,12 @@ def explain(diffInQuery, diffInPlan):
                     size1 -= 1
         elif status == "Removed":
             explaination = explaination.rstrip()
-            explaination += ", lesser to none filter are required for scans. "
+            if toskip == 0:
+                explaination += ", lesser to none filter are required for scans. "
         elif status == "Modified":
             explaination = explaination.rstrip()
-            explaination += ", no extra filtering is needed. "
+            if toskip == 0:
+                explaination += ", no extra filtering is needed. "
     for i in set(diffInQueryPlan["diffInPlan"]):
         if i == "Gather Merge":
             explaination += "\nThe query plan uses a Gather Merge that combines the output of its child nodes, which are executed by parallel workers. "
@@ -176,12 +187,13 @@ def gettingAdd(diffInQuery):
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
         if diffInQuery.get("Added"):
             for q in diffInQuery["Added"]:
+                conditions = q.split('AND')
+                extracted_conditions = [condition.strip() for condition in conditions]
+                extracted_conditions = list(filter(None, extracted_conditions))
                 print("s:", s)
-                match = re.search(filter_exp, " ".join(q.split()))
-                if match:
-                    q = format_string(match.group(1))
-                    print("q:", q)
-                    if q.lower() in s.lower():
+                print("q:", extracted_conditions)
+                for i in range(len(extracted_conditions)):
+                    if extracted_conditions[i] in s.replace("'", "").lower():
                         matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
