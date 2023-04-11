@@ -5,8 +5,6 @@ from typing import Dict, Any, List, Tuple, Set
 import psycopg2
 import sqlparse
 
-import interface
-
 SQL_KEYWORDS = set(
     "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
         ", "
@@ -320,20 +318,22 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
 def getDiff(sql1: str, sql2: str) -> dict:
     _, list1 = parseSQL(sql1)
     _, list2 = parseSQL(sql2)
-    diff = {}
+    diff = {
+        "Modified": [],
+        "Removed": [],
+        "Added": [],
+    }
     for i, (sublist1, sublist2) in enumerate(zip(list1, list2)):
         for i in range(len(sublist1)):
             sublist1[i] = sublist1[i].replace(",", "")
         for i in range(len(sublist2)):
             sublist2[i] = sublist2[i].replace(",", "")
 
-        diff["Modified"] = []
-        diff["Removed"] = []
-        diff["Added"] = []
         if sublist1 != sublist2:
             sm = difflib.SequenceMatcher(
                 lambda x: x in SQL_KEYWORDS, sublist1, sublist2
             )
+
             for tag, i1, i2, j1, j2 in sm.get_opcodes():
                 str1 = " ".join(sublist1[i1:i2])
                 str2 = " ".join(sublist2[j1:j2])
@@ -348,14 +348,10 @@ def getDiff(sql1: str, sql2: str) -> dict:
 
 
 if __name__ == "__main__":
-    interface.start_ui()
-    # plan = query(
-    #     "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_extendedprice > 100 group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;")
-    # q1 = QueryPlan(plan["Plan"])
-    # plan = query(
-    #     "select l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority from customer, orders, lineitem where c_mktsegment = 'BUILDING' and c_custkey = o_custkey and l_orderkey = o_orderkey and o_totalprice > 10 and l_extendedprice > 10 group by l_orderkey, o_orderdate, o_shippriority order by revenue desc, o_orderdate;")
-    # q2 = QueryPlan(plan["Plan"])
-
+    # interface.start_ui()
+    sql1 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 10    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
+    sql2 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 1011    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
+    print(getDiff(sql1, sql2))
     # a, b, c = q1.IsEqual(q2)
     # for i in b:
     #     print(str(b))
