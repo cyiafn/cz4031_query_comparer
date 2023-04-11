@@ -5,6 +5,8 @@ from typing import Dict, Any, List, Tuple, Set
 import psycopg2
 import sqlparse
 
+import interface
+
 SQL_KEYWORDS = set(
     "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
         ", "
@@ -348,10 +350,10 @@ def getDiff(sql1: str, sql2: str) -> dict:
 
 
 if __name__ == "__main__":
-    # interface.start_ui()
-    sql1 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 10    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
-    sql2 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 1011    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
-    print(getDiff(sql1, sql2))
+    interface.start_ui()
+    # sql1 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 10    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
+    # sql2 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 1011    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
+    # print(getDiff(sql1, sql2))
     # a, b, c = q1.IsEqual(q2)
     # for i in b:
     #     print(str(b))
