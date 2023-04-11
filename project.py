@@ -7,11 +7,12 @@ import sqlparse
 
 import interface
 
-SQL_KEYWORDS = set(
-    "SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, OFFSET, JOIN, INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, NATURAL JOIN, USING, DISTINCT, UNION, INTERSECT, EXCEPT, VALUES, FETCH, NEXT, LAST, FIRST, PRIOR, CURRENT, ROW, ROWS, OVER, PARTITION BY, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, FIRST_VALUE, LAST_VALUE, NTH_VALUE, CASE, WHEN, THEN, ELSE, END, CAST, COALESCE, NULLIF, GREATEST, LEAST".split(
-        ", "
-    )
-)
+SQL_KEYWORDS = {"SELECT", "FROM", "WHERE", "GROUP BY", "HAVING", "ORDER BY", "LIMIT", "OFFSET", "JOIN", "INNER JOIN",
+                "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "CROSS JOIN", "NATURAL JOIN", "USING", "DISTINCT", "UNION",
+                "INTERSECT", "EXCEPT", "VALUES", "FETCH", "NEXT", "LAST", "FIRST", "PRIOR", "CURRENT", "ROW", "ROWS",
+                "OVER", "PARTITION" "BY", "RANK", "DENSE_RANK", "ROW_NUMBER", "LAG", "LEAD", "FIRST_VALUE",
+                "LAST_VALUE", "NTH_VALUE", "CASE", "WHEN", "THEN", "ELSE", "END", "CAST", "COALESCE", "NULLIF",
+                "GREATEST", "LEAST"}
 
 
 # Query Tree Nodes =======================================================
@@ -277,7 +278,7 @@ def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
 # SQL =====
 def parseSQL(sqlQuery: str) -> Tuple[str, List[List[str]]]:
     formattedSQL = sqlparse.format(
-        sqlQuery, reindent=True, keyword_case="upper", strip_comments=True
+        sqlQuery.replace("(", "").replace(")", ""), reindent=True, keyword_case="upper", strip_comments=True
     )
     return formattedSQL, groupFormattedSQLByClause(formattedSQL)
 
@@ -307,7 +308,9 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
     splitSQLQuery = sqlQuery.split("\n")
     for line in splitSQLQuery:
         strippedLine = line.strip()
-        if strippedLine.split(" ")[0] in SQL_KEYWORDS:
+        strippedLine = strippedLine.split(" ")
+        if strippedLine[0] in SQL_KEYWORDS or len(
+                strippedLine) > 1 and f"{strippedLine[0]} {strippedLine[1]}" in SQL_KEYWORDS:
             groupedSQL.append(tempGroup) if len(tempGroup) > 0 else None
             tempGroup = [line]
         else:
@@ -351,8 +354,8 @@ def getDiff(sql1: str, sql2: str) -> dict:
 
 if __name__ == "__main__":
     interface.start_ui()
-    # sql1 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 10    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
-    # sql2 = "select      ps_partkey,      sum(ps_supplycost * ps_availqty) as value    from      partsupp,      supplier,      nation    where      ps_suppkey = s_suppkey      and s_nationkey = n_nationkey      and n_name = 'GERMANY'      and ps_supplycost > 20      and s_acctbal > 1011    group by      ps_partkey having        sum(ps_supplycost * ps_availqty) > (          select            sum(ps_supplycost * ps_availqty) * 0.0001000000          from            partsupp,            supplier,            nation          where            ps_suppkey = s_suppkey            and s_nationkey = n_nationkey            and n_name = 'GERMANY'        )    order by      value desc;"
+    # sql1 = "SELECT ps_partkey, sum(ps_supplycost * ps_availqty) AS value FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND ps_supplycost > 20 AND s_acctbal > 10 GROUP BY ps_partkey HAVING sum(ps_supplycost * ps_availqty) > ( SELECT sum(ps_supplycost * ps_availqty) * 0.0001000000 FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND s_acctbal > 100 ) ORDER BY value DESC;"
+    # sql2 = "SELECT ps_partkey, sum(ps_supplycost * ps_availqty) AS value FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND ps_supplycost > 20 AND s_acctbal > 10 GROUP BY ps_partkey HAVING sum(ps_supplycost * ps_availqty) > ( SELECT sum(ps_supplycost * ps_availqty) * 0.0001000000 FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND s_acctbal > 100 ) ORDER BY value DESC;"
     # print(getDiff(sql1, sql2))
     # a, b, c = q1.IsEqual(q2)
     # for i in b:
