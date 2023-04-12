@@ -85,8 +85,6 @@ button_column = [
 layout = [
     [
         sg.Column(query_column),
-        # sg.VSeperator(),
-        # sg.Column(queryplan_column),
         sg.VSeperator(),
         sg.Column(queryplanimage_column),
         sg.Column(queryplanimage2_column),

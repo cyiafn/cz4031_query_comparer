@@ -7,12 +7,57 @@ import sqlparse
 
 import interface
 
-SQL_KEYWORDS = {"SELECT", "FROM", "WHERE", "GROUP BY", "HAVING", "ORDER BY", "LIMIT", "OFFSET", "JOIN", "INNER JOIN",
-                "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "CROSS JOIN", "NATURAL JOIN", "USING", "DISTINCT", "UNION",
-                "INTERSECT", "EXCEPT", "VALUES", "FETCH", "NEXT", "LAST", "FIRST", "PRIOR", "CURRENT", "ROW", "ROWS",
-                "OVER", "PARTITION" "BY", "RANK", "DENSE_RANK", "ROW_NUMBER", "LAG", "LEAD", "FIRST_VALUE",
-                "LAST_VALUE", "NTH_VALUE", "CASE", "WHEN", "THEN", "ELSE", "END", "CAST", "COALESCE", "NULLIF",
-                "GREATEST", "LEAST"}
+SQL_KEYWORDS = {
+    "SELECT",
+    "FROM",
+    "WHERE",
+    "GROUP BY",
+    "HAVING",
+    "ORDER BY",
+    "LIMIT",
+    "OFFSET",
+    "JOIN",
+    "INNER JOIN",
+    "LEFT JOIN",
+    "RIGHT JOIN",
+    "FULL JOIN",
+    "CROSS JOIN",
+    "NATURAL JOIN",
+    "USING",
+    "DISTINCT",
+    "UNION",
+    "INTERSECT",
+    "EXCEPT",
+    "VALUES",
+    "FETCH",
+    "NEXT",
+    "LAST",
+    "FIRST",
+    "PRIOR",
+    "CURRENT",
+    "ROW",
+    "ROWS",
+    "OVER",
+    "PARTITION" "BY",
+    "RANK",
+    "DENSE_RANK",
+    "ROW_NUMBER",
+    "LAG",
+    "LEAD",
+    "FIRST_VALUE",
+    "LAST_VALUE",
+    "NTH_VALUE",
+    "CASE",
+    "WHEN",
+    "THEN",
+    "ELSE",
+    "END",
+    "CAST",
+    "COALESCE",
+    "NULLIF",
+    "GREATEST",
+    "LEAST",
+}
 
 
 # Query Tree Nodes =======================================================
@@ -46,10 +91,10 @@ class QueryPlanNode:
 
 class QueryPlanSortNode(QueryPlanNode):
     def __init__(
-            self,
-            node: Dict[str, Any],
-            left: QueryPlanNode = None,
-            right: QueryPlanNode = None,
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.SortKeys: List[str] = node["Sort Key"]
@@ -72,10 +117,10 @@ class QueryPlanSortNode(QueryPlanNode):
 
 class QueryPlanGroupNode(QueryPlanNode):
     def __init__(
-            self,
-            node: Dict[str, Any],
-            left: QueryPlanNode = None,
-            right: QueryPlanNode = None,
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.GroupKeys: List[str] = node["Group Key"]
@@ -98,10 +143,10 @@ class QueryPlanGroupNode(QueryPlanNode):
 
 class QueryPlanJoinNode(QueryPlanNode):
     def __init__(
-            self,
-            node: Dict[str, Any],
-            left: QueryPlanNode = None,
-            right: QueryPlanNode = None,
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.JoinType: str = node["Join Type"]
@@ -129,18 +174,18 @@ class QueryPlanJoinNode(QueryPlanNode):
         if not isinstance(other, QueryPlanJoinNode):
             return False
         return (
-                super().__eq__(other)
-                and self.JoinType == other.JoinType
-                and self.JoinCond == other.JoinCond
+            super().__eq__(other)
+            and self.JoinType == other.JoinType
+            and self.JoinCond == other.JoinCond
         )
 
 
 class QueryPlanScanNode(QueryPlanNode):
     def __init__(
-            self,
-            node: Dict[str, Any],
-            left: QueryPlanNode = None,
-            right: QueryPlanNode = None,
+        self,
+        node: Dict[str, Any],
+        left: QueryPlanNode = None,
+        right: QueryPlanNode = None,
     ):
         super().__init__(node, left, right)
         self.RelationName: str = node["Relation Name"]
@@ -169,11 +214,11 @@ class QueryPlanScanNode(QueryPlanNode):
         if not isinstance(other, QueryPlanScanNode):
             return False
         return (
-                super().__eq__(other)
-                and self.RelationName == other.RelationName
-                and self.IndexName == other.IndexName
-                and self.IndexCond == other.IndexCond
-                and self.Filter == other.Filter
+            super().__eq__(other)
+            and self.RelationName == other.RelationName
+            and self.IndexName == other.IndexName
+            and self.IndexCond == other.IndexCond
+            and self.Filter == other.Filter
         )
 
 
@@ -205,11 +250,11 @@ class QueryPlan:
         print(self.root)
 
     def isEq(
-            self,
-            node1: QueryPlanNode,
-            node2: QueryPlanNode,
-            leftTree: Set[QueryPlanNode],
-            rightTree: Set[QueryPlanNode],
+        self,
+        node1: QueryPlanNode,
+        node2: QueryPlanNode,
+        leftTree: Set[QueryPlanNode],
+        rightTree: Set[QueryPlanNode],
     ) -> None:
         if node1 is None and node2 is None:
             return
@@ -278,7 +323,10 @@ def getDBConfig(configName: str = "database.ini") -> Dict[str, str]:
 # SQL =====
 def parseSQL(sqlQuery: str) -> Tuple[str, List[List[str]]]:
     formattedSQL = sqlparse.format(
-        sqlQuery.replace("(", "").replace(")", ""), reindent=True, keyword_case="upper", strip_comments=True
+        sqlQuery.replace("(", "").replace(")", ""),
+        reindent=True,
+        keyword_case="upper",
+        strip_comments=True,
     )
     return formattedSQL, groupFormattedSQLByClause(formattedSQL)
 
@@ -309,8 +357,11 @@ def groupFormattedSQLByClause(sqlQuery: str) -> List[List[str]]:
     for line in splitSQLQuery:
         strippedLine = line.strip()
         strippedLine = strippedLine.split(" ")
-        if strippedLine[0] in SQL_KEYWORDS or len(
-                strippedLine) > 1 and f"{strippedLine[0]} {strippedLine[1]}" in SQL_KEYWORDS:
+        if (
+            strippedLine[0] in SQL_KEYWORDS
+            or len(strippedLine) > 1
+            and f"{strippedLine[0]} {strippedLine[1]}" in SQL_KEYWORDS
+        ):
             groupedSQL.append(tempGroup) if len(tempGroup) > 0 else None
             tempGroup = [line]
         else:
@@ -354,11 +405,3 @@ def getDiff(sql1: str, sql2: str) -> dict:
 
 if __name__ == "__main__":
     interface.start_ui()
-    # sql1 = "SELECT ps_partkey, sum(ps_supplycost * ps_availqty) AS value FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND ps_supplycost > 20 AND s_acctbal > 10 GROUP BY ps_partkey HAVING sum(ps_supplycost * ps_availqty) > ( SELECT sum(ps_supplycost * ps_availqty) * 0.0001000000 FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND s_acctbal > 100 ) ORDER BY value DESC;"
-    # sql2 = "SELECT ps_partkey, sum(ps_supplycost * ps_availqty) AS value FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND ps_supplycost > 20 AND s_acctbal > 10 GROUP BY ps_partkey HAVING sum(ps_supplycost * ps_availqty) > ( SELECT sum(ps_supplycost * ps_availqty) * 0.0001000000 FROM partsupp, supplier, nation WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY' AND s_acctbal > 100 ) ORDER BY value DESC;"
-    # print(getDiff(sql1, sql2))
-    # a, b, c = q1.IsEqual(q2)
-    # for i in b:
-    #     print(str(b))
-    # for i in c:
-    #     print(str(c))

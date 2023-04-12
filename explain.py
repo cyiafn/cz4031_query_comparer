@@ -16,23 +16,14 @@ filter_exp = r"(?i)(?:AND|NOT|OR|WHERE)\s+(.*)"
 def explain(diffInQuery, diffInPlan):
     # Remove Empty List
     diffInQuery = {i: j for i, j in diffInQuery.items() if j != []}
-    # for i in diffInQueryPlan:
-    #     diffInQueryPlan[i].clear
-    print("diffInQuery:", diffInQuery)
-    print("diffInPlan:", diffInPlan)
 
-    print_nodes(diffInPlan)
+    format_query_plan(diffInPlan)
     gettingAdd(diffInQuery)
     table1 = []
     table1.clear()
     table1 = joiningsplit()
 
     explaination = ""
-
-    print("diffInQueryPlan:", diffInQueryPlan)
-    print("queries_subset:", queries_subset)
-    for i in diffInQueryPlan:
-        print(diffInQueryPlan[i])
 
     count = 0
     toskip = 0
@@ -120,13 +111,23 @@ def explain(diffInQuery, diffInPlan):
         else:
             explaination += "\nThe query plan uses " + i + ". "
     for i in set(diffInQueryPlan["diffInGroupNode"]):
-            explaination += "\nGrouping techniqes such as " + i + " are used. "
+        explaination += "\nGrouping techniqes such as " + i + " are used. "
     if size > 0:
         explaination += "\nSuch joined operation have been used: "
     for i in diffInQueryPlan["diffInJoinNode"]:
-        for x in range(0,len(table1),2):
+        for x in range(0, len(table1), 2):
             if x == 0:
-                explaination += "\nTable " + table1[x] + " and table " + table1[x+1] + " is joined using " + i.split("-")[0] + "with join condition" + i.split("-")[1] + ". "
+                explaination += (
+                    "\nTable "
+                    + table1[x]
+                    + " and table "
+                    + table1[x + 1]
+                    + " is joined using "
+                    + i.split("-")[0]
+                    + "with join condition"
+                    + i.split("-")[1]
+                    + ". "
+                )
     for i in set(diffInQueryPlan["diffInSortNode"]):
         explaination += i + " ."
 
@@ -140,7 +141,8 @@ def get_table_name(text):
         return match.group(1)
     else:
         return None
-    
+
+
 def joiningsplit() -> list:
     table = []
     table.clear()
@@ -148,8 +150,7 @@ def joiningsplit() -> list:
         temp = i.split("-")[1]
         table.append(get_table_name(temp.split("=")[0].strip()))
         table.append(get_table_name(temp.split("=")[1].strip()))
-    return(table)
-
+    return table
 
 
 def format_string(text):
@@ -158,7 +159,7 @@ def format_string(text):
     return re.sub(r"::\w+", "", text)
 
 
-def print_nodes(nodes):
+def format_query_plan(nodes):
     for i in diffInQueryPlan:
         diffInQueryPlan[i].clear()
     for node in nodes:
@@ -187,11 +188,9 @@ def gettingAdd(diffInQuery):
     for i, s in enumerate(diffInQueryPlan["diffInScanNode"]):
         if diffInQuery.get("Added"):
             for q in diffInQuery["Added"]:
-                conditions = q.split('AND')
+                conditions = q.split("AND")
                 extracted_conditions = [condition.strip() for condition in conditions]
                 extracted_conditions = list(filter(None, extracted_conditions))
-                print("s:", s)
-                print("q:", extracted_conditions)
                 for i in range(len(extracted_conditions)):
                     if extracted_conditions[i] in s.replace("'", "").lower():
                         matching_indices.append(i)
