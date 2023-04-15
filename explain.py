@@ -191,8 +191,8 @@ def gettingAdd(diffInQuery):
                 conditions = q.split("AND")
                 extracted_conditions = [condition.strip() for condition in conditions]
                 extracted_conditions = list(filter(None, extracted_conditions))
-                for i in range(len(extracted_conditions)):
-                    if extracted_conditions[i] in s.replace("'", "").lower():
+                for o in range(len(extracted_conditions)):
+                    if extracted_conditions[o].replace("'", "").lower() in s.replace("'", "").lower():
                         matching_indices.append(i)
 
     queries_subset = [diffInQueryPlan["diffInScanNode"][i] for i in matching_indices]
